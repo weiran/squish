@@ -62,17 +62,38 @@ squish --limit 10 /path/to/videos
 
 ## Prerequisites
 
-- .NET 8.0 SDK
 - ffmpeg and ffprobe installed and available in PATH
 - Optional: NVIDIA GPU drivers for NVENC acceleration
 
-## Building
+## Quick Start
+
+### Option 1: Download Pre-built Executables (Recommended)
+
+Self-contained executables with embedded .NET runtime are available in the `publish/` directory after running the build script:
+
+- **Windows x64**: `publish/win-x64/Squish.Console.exe`
+- **macOS x64**: `publish/osx-x64/Squish.Console`  
+- **macOS ARM64**: `publish/osx-arm64/Squish.Console`
+- **Linux x64**: `publish/linux-x64/Squish.Console`
+
+These executables don't require .NET to be installed on the target system.
+
+### Option 2: Build from Source
+
+Requirements:
+- .NET 9.0 SDK
 
 ```bash
+# Build for development
 dotnet build
+
+# Create self-contained executables for all platforms
+./build-all.sh          # On macOS/Linux
+# OR
+./build-all.ps1         # On Windows (PowerShell)
 ```
 
-## Running
+### Option 3: Run with .NET
 
 ```bash
 dotnet run --project Squish.Console -- [options] <directory>

@@ -402,6 +402,9 @@ Temporary Items
 .apdisk
 
 # Project-specific ignores
+# Published executables and artifacts
+publish/
+
 # Temporary video files created during conversion
 *.tmp
 *.temp
