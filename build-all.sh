@@ -48,42 +48,42 @@ echo ""
 
 # Make executables executable on Unix systems
 echo "🔧 Setting executable permissions..."
-chmod +x publish/osx-x64/Squish.Console
-chmod +x publish/osx-arm64/Squish.Console
-chmod +x publish/linux-x64/Squish.Console
+chmod +x publish/osx-x64/squish
+chmod +x publish/osx-arm64/squish
+chmod +x publish/linux-x64/squish
 
 # Display build results
 echo "🎉 All builds completed successfully!"
 echo ""
 echo "📂 Executables created in:"
-echo "   • Windows x64:     publish/win-x64/Squish.Console.exe"
-echo "   • macOS x64:       publish/osx-x64/Squish.Console"
-echo "   • macOS ARM64:     publish/osx-arm64/Squish.Console"
-echo "   • Linux x64:       publish/linux-x64/Squish.Console"
+echo "   • Windows x64:     publish/win-x64/squish.exe"
+echo "   • macOS x64:       publish/osx-x64/squish"
+echo "   • macOS ARM64:     publish/osx-arm64/squish"
+echo "   • Linux x64:       publish/linux-x64/squish"
 echo ""
 echo "💡 These executables include the .NET runtime and can run without installing .NET"
 echo ""
 
 # Show file sizes
 echo "📊 Executable sizes:"
-if [ -f "publish/win-x64/Squish.Console.exe" ]; then
+if [ -f "publish/win-x64/squish.exe" ]; then
     echo -n "   Windows x64:  "
-    ls -lh publish/win-x64/Squish.Console.exe | awk '{print $5}'
+    ls -lh publish/win-x64/squish.exe | awk '{print $5}'
 fi
 
-if [ -f "publish/osx-x64/Squish.Console" ]; then
+if [ -f "publish/osx-x64/squish" ]; then
     echo -n "   macOS x64:    "
-    ls -lh publish/osx-x64/Squish.Console | awk '{print $5}'
+    ls -lh publish/osx-x64/squish | awk '{print $5}'
 fi
 
-if [ -f "publish/osx-arm64/Squish.Console" ]; then
+if [ -f "publish/osx-arm64/squish" ]; then
     echo -n "   macOS ARM64:  "
-    ls -lh publish/osx-arm64/Squish.Console | awk '{print $5}'
+    ls -lh publish/osx-arm64/squish | awk '{print $5}'
 fi
 
-if [ -f "publish/linux-x64/Squish.Console" ]; then
+if [ -f "publish/linux-x64/squish" ]; then
     echo -n "   Linux x64:    "
-    ls -lh publish/linux-x64/Squish.Console | awk '{print $5}'
+    ls -lh publish/linux-x64/squish | awk '{print $5}'
 fi
 
 echo ""

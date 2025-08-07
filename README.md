@@ -71,10 +71,10 @@ squish --limit 10 /path/to/videos
 
 Self-contained executables with embedded .NET runtime are available in the `publish/` directory after running the build script:
 
-- **Windows x64**: `publish/win-x64/Squish.Console.exe`
-- **macOS x64**: `publish/osx-x64/Squish.Console`  
-- **macOS ARM64**: `publish/osx-arm64/Squish.Console`
-- **Linux x64**: `publish/linux-x64/Squish.Console`
+- **Windows x64**: `publish/win-x64/squish.exe`
+- **macOS x64**: `publish/osx-x64/squish`  
+- **macOS ARM64**: `publish/osx-arm64/squish`
+- **Linux x64**: `publish/linux-x64/squish`
 
 These executables don't require .NET to be installed on the target system.
 

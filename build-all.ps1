@@ -48,10 +48,10 @@ Write-Host ""
 Write-Host "🎉 All builds completed successfully!" -ForegroundColor Green
 Write-Host ""
 Write-Host "📂 Executables created in:" -ForegroundColor White
-Write-Host "   • Windows x64:     publish/win-x64/Squish.Console.exe" -ForegroundColor Gray
-Write-Host "   • macOS x64:       publish/osx-x64/Squish.Console" -ForegroundColor Gray
-Write-Host "   • macOS ARM64:     publish/osx-arm64/Squish.Console" -ForegroundColor Gray  
-Write-Host "   • Linux x64:       publish/linux-x64/Squish.Console" -ForegroundColor Gray
+Write-Host "   • Windows x64:     publish/win-x64/squish.exe" -ForegroundColor Gray
+Write-Host "   • macOS x64:       publish/osx-x64/squish" -ForegroundColor Gray
+Write-Host "   • macOS ARM64:     publish/osx-arm64/squish" -ForegroundColor Gray  
+Write-Host "   • Linux x64:       publish/linux-x64/squish" -ForegroundColor Gray
 Write-Host ""
 Write-Host "💡 These executables include the .NET runtime and can run without installing .NET" -ForegroundColor Yellow
 Write-Host ""
@@ -59,26 +59,26 @@ Write-Host ""
 # Show file sizes
 Write-Host "📊 Executable sizes:" -ForegroundColor White
 
-if (Test-Path "publish/win-x64/Squish.Console.exe") {
-    $size = (Get-Item "publish/win-x64/Squish.Console.exe").Length
+if (Test-Path "publish/win-x64/squish.exe") {
+    $size = (Get-Item "publish/win-x64/squish.exe").Length
     $sizeStr = if ($size -gt 1MB) { "{0:N1} MB" -f ($size / 1MB) } else { "{0:N1} KB" -f ($size / 1KB) }
     Write-Host "   Windows x64:  $sizeStr" -ForegroundColor Gray
 }
 
-if (Test-Path "publish/osx-x64/Squish.Console") {
-    $size = (Get-Item "publish/osx-x64/Squish.Console").Length
+if (Test-Path "publish/osx-x64/squish") {
+    $size = (Get-Item "publish/osx-x64/squish").Length
     $sizeStr = if ($size -gt 1MB) { "{0:N1} MB" -f ($size / 1MB) } else { "{0:N1} KB" -f ($size / 1KB) }
     Write-Host "   macOS x64:    $sizeStr" -ForegroundColor Gray
 }
 
-if (Test-Path "publish/osx-arm64/Squish.Console") {
-    $size = (Get-Item "publish/osx-arm64/Squish.Console").Length
+if (Test-Path "publish/osx-arm64/squish") {
+    $size = (Get-Item "publish/osx-arm64/squish").Length
     $sizeStr = if ($size -gt 1MB) { "{0:N1} MB" -f ($size / 1MB) } else { "{0:N1} KB" -f ($size / 1KB) }
     Write-Host "   macOS ARM64:  $sizeStr" -ForegroundColor Gray
 }
 
-if (Test-Path "publish/linux-x64/Squish.Console") {
-    $size = (Get-Item "publish/linux-x64/Squish.Console").Length
+if (Test-Path "publish/linux-x64/squish") {
+    $size = (Get-Item "publish/linux-x64/squish").Length
     $sizeStr = if ($size -gt 1MB) { "{0:N1} MB" -f ($size / 1MB) } else { "{0:N1} KB" -f ($size / 1KB) }
     Write-Host "   Linux x64:    $sizeStr" -ForegroundColor Gray
 }
