@@ -2,7 +2,7 @@
 
 Squish is a utility designed to reduce video file sizes through reencoding and compression. It uses ffmpeg to reencode videos into h.265 with an efficient bitrate. Squish provides the file discovery, queue management, and parallelisation of encoding tasks.
 
-## Squash Core
+## Squish Core
 
 This library processes video files in the specified directory, checking if they are encoded with H.265 (HEVC). Files not using H.265 will be converted using FFMPEG and replace the original file. GPU acceleration (NVENC, Apple etc.) is used automatically when available. Multiple files can be processed in parallel for faster conversion.
 
@@ -11,8 +11,8 @@ This library processes video files in the specified directory, checking if they 
 #### Project Structure
 
 ```
-Squash.Core/
-├── Squash.Core.csproj
+Squish.Core/
+├── Squish.Core.csproj
 ├── Abstractions/
 │   ├── IFileFinder.cs
 │   ├── IVideoInspector.cs
@@ -70,17 +70,17 @@ The `VideoConverter` will check the exit code of the `ffmpeg` process to determi
 *   **Mocking**: `Moq` will be used for creating mock objects for interfaces like `IFileFinder`, `IVideoInspector`, and `IVideoConverter`.
 *   **Coverage**: Unit tests will cover all the business logic in the services and the `JobRunner`. Integration tests will be created to test the interaction with the actual `ffmpeg` and `ffprobe` command-line tools.
 
-## Squash Console
+## Squish Console
 
-Console app interface to squash. This uses `System.CommandLine`.
+Console app interface to Squish. This uses `System.CommandLine`.
 
 ### Technical Design
 
 #### Project Structure
 
 ```
-Squash.Console/
-├── Squash.Console.csproj
+Squish.Console/
+├── Squish.Console.csproj
 ├── Program.cs
 └── appsettings.json
 ```
@@ -91,13 +91,13 @@ Squash.Console/
 
 #### Dependency Injection
 
-`Microsoft.Extensions.DependencyInjection` will be used to set up the dependency injection container. All the services from `Squash.Core` will be registered in the container. The `JobRunner` will be resolved from the container and executed.
+`Microsoft.Extensions.DependencyInjection` will be used to set up the dependency injection container. All the services from `Squish.Core` will be registered in the container. The `JobRunner` will be resolved from the container and executed.
 
 #### User Interface
 
 The console will display a list of files to be converted. `Spectre.Console` will be used to create a rich and interactive console UI. It will show a progress bar for each concurrent conversion job, displaying the percentage complete and the current encoding speed (e.g., "1.5x"). A summary of the conversion results will be displayed at the end.
 
-#### Interaction with Squash Core
+#### Interaction with Squish Core
 
 The `Program.cs` file will be the entry point of the application. It will create a `ServiceCollection`, register the services, and build a `ServiceProvider`. It will then create a `RootCommand` with `System.CommandLine` and set a handler that will resolve the `JobRunner` and the `ConversionOptions` and start the conversion process.
 
