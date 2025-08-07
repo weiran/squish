@@ -69,7 +69,7 @@ public class JobRunner
 
         var results = new List<ConversionResult>();
         var semaphore = new SemaphoreSlim(options.ParallelJobs, options.ParallelJobs);
-        var tasks = new List<Task>();
+        var tasks = new List<Task<ConversionResult>>();
 
         while (_queueManager.Count > 0 || tasks.Any(t => !t.IsCompleted))
         {

@@ -73,7 +73,7 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
             new TaskDescriptionColumn(),
             new ProgressBarColumn(),
             new PercentageColumn(),
-            new SpeedColumn(),
+            new RemainingTimeColumn(),
             new SpinnerColumn());
 
     await progress.StartAsync(async ctx =>
