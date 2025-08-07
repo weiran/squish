@@ -11,6 +11,7 @@ public class QueueManager : IQueueManager
 
     public void Enqueue(VideoFile file)
     {
+        ArgumentNullException.ThrowIfNull(file);
         _queue.Enqueue(file);
         Interlocked.Increment(ref _count);
     }
@@ -29,6 +30,7 @@ public class QueueManager : IQueueManager
 
     public void EnqueueRange(IEnumerable<VideoFile> files)
     {
+        ArgumentNullException.ThrowIfNull(files);
         var sortedFiles = files.OrderByDescending(f => f.FileSize);
         foreach (var file in sortedFiles)
         {

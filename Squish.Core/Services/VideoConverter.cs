@@ -10,12 +10,24 @@ namespace Squish.Core.Services;
 
 public class VideoConverter : IVideoConverter
 {
+    private readonly IProcessWrapper _processWrapper;
     private static readonly Regex ProgressRegex = new(@"time=(\d{2}):(\d{2}):(\d{2}\.\d{2})", RegexOptions.Compiled);
     private static readonly Regex SpeedRegex = new(@"speed=\s*(\d+(?:\.\d+)?)x", RegexOptions.Compiled);
     private static readonly Regex DurationRegex = new(@"Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})", RegexOptions.Compiled);
 
+    public VideoConverter(IProcessWrapper processWrapper)
+    {
+        _processWrapper = processWrapper ?? throw new ArgumentNullException(nameof(processWrapper));
+    }
+
     public async Task<ConversionResult> ConvertAsync(VideoFile file, ConversionOptions options, IProgress<ConversionProgress> progress)
     {
+        ArgumentNullException.ThrowIfNull(file);
+        ArgumentNullException.ThrowIfNull(options);
+        
+        if (string.IsNullOrWhiteSpace(file.FilePath))
+            throw new ArgumentException("File path cannot be null or empty", nameof(file));
+
         var result = new ConversionResult
         {
             FilePath = file.FilePath,

@@ -45,6 +45,8 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
     }
 
     var services = new ServiceCollection();
+    services.AddTransient<IFileSystemWrapper, FileSystemWrapper>();
+    services.AddTransient<IProcessWrapper, ProcessWrapper>();
     services.AddTransient<IFileFinder, FileFinder>();
     services.AddTransient<IVideoInspector, VideoInspector>();
     services.AddTransient<IVideoConverter, VideoConverter>();
