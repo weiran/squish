@@ -89,12 +89,12 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
             {
                 if (!fileProgressTasks.ContainsKey(p.CurrentFile))
                 {
-                    fileProgressTasks[p.CurrentFile] = ctx.AddTask($"[blue]{p.CurrentFile}[/]", maxValue: 100);
+                    fileProgressTasks[p.CurrentFile] = ctx.AddTask($"[blue]{p.CurrentFile.EscapeMarkup()}[/]", maxValue: 100);
                 }
                 
                 var task = fileProgressTasks[p.CurrentFile];
                 task.Value = p.Percentage;
-                task.Description = $"[blue]{p.CurrentFile}[/] [dim]({p.Speed})[/]";
+                task.Description = $"[blue]{p.CurrentFile.EscapeMarkup()}[/] [dim]({p.Speed})[/]";
             }
         });
 
@@ -116,7 +116,7 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
             foreach (var result in resultsList)
             {
                 table.AddRow(
-                    result.FilePath,
+                    result.FilePath.EscapeMarkup(),
                     FormatFileSize(result.OriginalSize));
             }
 
