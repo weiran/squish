@@ -70,6 +70,15 @@ public class JobRunner
         var results = new List<ConversionResult>();
         var semaphore = new SemaphoreSlim(options.ParallelJobs, options.ParallelJobs);
         var tasks = new List<Task<ConversionResult>>();
+        var totalFiles = filesToProcess.Count;
+        
+        // Report initial progress
+        progress?.Report(new ConversionProgress
+        {
+            TotalFiles = totalFiles,
+            CompletedFiles = 0,
+            CurrentFile = "Starting..."
+        });
 
         while (_queueManager.Count > 0 || tasks.Any(t => !t.IsCompleted))
         {
@@ -93,6 +102,14 @@ public class JobRunner
                     {
                         var result = await completedTask;
                         results.Add(result);
+                        
+                        // Report overall progress after each file completion
+                        progress?.Report(new ConversionProgress
+                        {
+                            TotalFiles = totalFiles,
+                            CompletedFiles = results.Count,
+                            CurrentFile = $"Completed: {Path.GetFileName(result.FilePath)}"
+                        });
                     }
                     catch (Exception ex)
                     {

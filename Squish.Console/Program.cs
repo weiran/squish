@@ -85,6 +85,9 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
 
         var progressReporter = new Progress<ConversionProgress>(p =>
         {
+            // Update main task progress with overall percentage
+            mainTask.Value = p.OverallPercentage;
+            
             if (!string.IsNullOrEmpty(p.CurrentFile))
             {
                 if (!fileProgressTasks.ContainsKey(p.CurrentFile))
