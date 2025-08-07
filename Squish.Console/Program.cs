@@ -81,7 +81,6 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
     await progress.StartAsync(async ctx =>
     {
         var mainTask = ctx.AddTask("[green]Processing files[/]", maxValue: 100);
-        var fileProgressTasks = new Dictionary<string, ProgressTask>();
 
         var progressReporter = new Progress<ConversionProgress>(p =>
         {
@@ -90,14 +89,22 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
             
             if (!string.IsNullOrEmpty(p.CurrentFile))
             {
-                if (!fileProgressTasks.ContainsKey(p.CurrentFile))
+                // Handle discovery and inspection phases
+                if (p.CurrentFile.Contains("Discovering") || p.CurrentFile.Contains("Inspecting") || p.CurrentFile.StartsWith("Inspected:"))
                 {
-                    fileProgressTasks[p.CurrentFile] = ctx.AddTask($"[blue]{p.CurrentFile.EscapeMarkup()}[/]", maxValue: 100);
+                    mainTask.Description = $"[green]{p.CurrentFile.EscapeMarkup()}[/]";
+                    return;
                 }
                 
-                var task = fileProgressTasks[p.CurrentFile];
-                task.Value = p.Percentage;
-                task.Description = $"[blue]{p.CurrentFile.EscapeMarkup()}[/] [dim]({p.Speed})[/]";
+                // During conversion, show overall progress with current file info
+                if (p.CurrentFile.StartsWith("Completed:") || p.CurrentFile.Contains("conversion"))
+                {
+                    mainTask.Description = $"[green]Converting files ({p.CompletedFiles}/{p.TotalFiles})[/] - {p.CurrentFile.EscapeMarkup()}";
+                    return;
+                }
+                
+                // For individual file progress during conversion, update the main task description only
+                mainTask.Description = $"[green]Converting files ({p.CompletedFiles}/{p.TotalFiles})[/] - [blue]{Path.GetFileName(p.CurrentFile).EscapeMarkup()}[/] [dim]({p.Speed})[/]";
             }
         });
 

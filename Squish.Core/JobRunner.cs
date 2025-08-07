@@ -29,26 +29,60 @@ public class JobRunner
         IProgress<ConversionProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        var allFiles = await _fileFinder.FindFilesAsync(directoryPath);
-        var filesToProcess = new List<VideoFile>();
-
-        foreach (var file in allFiles)
+        // Report discovery phase
+        progress?.Report(new ConversionProgress
         {
+            CurrentFile = "Discovering video files..."
+        });
+
+        var allFiles = await _fileFinder.FindFilesAsync(directoryPath);
+        var allFilesList = allFiles.ToList();
+        
+        // Report inspection phase  
+        progress?.Report(new ConversionProgress
+        {
+            TotalFiles = allFilesList.Count,
+            CompletedFiles = 0,
+            CurrentFile = "Inspecting video codecs..."
+        });
+
+        var filesToProcess = new List<VideoFile>();
+        var semaphore = new SemaphoreSlim(Environment.ProcessorCount * 2, Environment.ProcessorCount * 2);
+        var processedCount = 0;
+
+        // Process files in parallel for codec inspection
+        var tasks = allFilesList.Select(async file =>
+        {
+            await semaphore.WaitAsync(cancellationToken);
             try
             {
                 var codec = await _videoInspector.GetVideoCodecAsync(file.FilePath);
                 file.Codec = codec;
 
-                if (!IsHevcCodec(codec))
+                var completed = Interlocked.Increment(ref processedCount);
+                progress?.Report(new ConversionProgress
                 {
-                    filesToProcess.Add(file);
-                }
+                    TotalFiles = allFilesList.Count,
+                    CompletedFiles = completed,
+                    CurrentFile = $"Inspected: {Path.GetFileName(file.FilePath)}"
+                });
+
+                return !IsHevcCodec(codec) ? file : null;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Warning: Could not inspect {file.FilePath}: {ex.Message}");
+                Interlocked.Increment(ref processedCount);
+                return null;
             }
-        }
+            finally
+            {
+                semaphore.Release();
+            }
+        });
+
+        var results = await Task.WhenAll(tasks);
+        filesToProcess.AddRange(results.Where(f => f != null)!);
 
         if (options.Limit.HasValue && options.Limit.Value > 0)
         {
@@ -67,47 +101,47 @@ public class JobRunner
 
         ((QueueManager)_queueManager).EnqueueRange(filesToProcess);
 
-        var results = new List<ConversionResult>();
-        var semaphore = new SemaphoreSlim(options.ParallelJobs, options.ParallelJobs);
-        var tasks = new List<Task<ConversionResult>>();
+        var conversionResults = new List<ConversionResult>();
+        var conversionSemaphore = new SemaphoreSlim(options.ParallelJobs, options.ParallelJobs);
+        var conversionTasks = new List<Task<ConversionResult>>();
         var totalFiles = filesToProcess.Count;
         
-        // Report initial progress
+        // Report initial conversion progress
         progress?.Report(new ConversionProgress
         {
             TotalFiles = totalFiles,
             CompletedFiles = 0,
-            CurrentFile = "Starting..."
+            CurrentFile = "Starting conversion..."
         });
 
-        while (_queueManager.Count > 0 || tasks.Any(t => !t.IsCompleted))
+        while (_queueManager.Count > 0 || conversionTasks.Any(t => !t.IsCompleted))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            while (_queueManager.Count > 0 && tasks.Count(t => !t.IsCompleted) < options.ParallelJobs)
+            while (_queueManager.Count > 0 && conversionTasks.Count(t => !t.IsCompleted) < options.ParallelJobs)
             {
                 var file = _queueManager.Dequeue();
                 if (file == null) break;
 
-                var task = ProcessFileAsync(file, options, progress, semaphore, cancellationToken);
-                tasks.Add(task);
+                var task = ProcessFileAsync(file, options, progress, conversionSemaphore, cancellationToken);
+                conversionTasks.Add(task);
             }
 
-            if (tasks.Any(t => t.IsCompleted))
+            if (conversionTasks.Any(t => t.IsCompleted))
             {
-                var completedTasks = tasks.Where(t => t.IsCompleted).ToList();
+                var completedTasks = conversionTasks.Where(t => t.IsCompleted).ToList();
                 foreach (var completedTask in completedTasks)
                 {
                     try
                     {
                         var result = await completedTask;
-                        results.Add(result);
+                        conversionResults.Add(result);
                         
                         // Report overall progress after each file completion
                         progress?.Report(new ConversionProgress
                         {
                             TotalFiles = totalFiles,
-                            CompletedFiles = results.Count,
+                            CompletedFiles = conversionResults.Count,
                             CurrentFile = $"Completed: {Path.GetFileName(result.FilePath)}"
                         });
                     }
@@ -115,23 +149,23 @@ public class JobRunner
                     {
                         Console.WriteLine($"Task failed: {ex.Message}");
                     }
-                    tasks.Remove(completedTask);
+                    conversionTasks.Remove(completedTask);
                 }
             }
 
-            if (tasks.Any(t => !t.IsCompleted))
+            if (conversionTasks.Any(t => !t.IsCompleted))
             {
                 await Task.Delay(100, cancellationToken);
             }
         }
 
-        await Task.WhenAll(tasks);
-        foreach (var task in tasks)
+        await Task.WhenAll(conversionTasks);
+        foreach (var task in conversionTasks)
         {
             try
             {
                 var result = await task;
-                results.Add(result);
+                conversionResults.Add(result);
             }
             catch (Exception ex)
             {
@@ -139,7 +173,7 @@ public class JobRunner
             }
         }
 
-        return results;
+        return conversionResults;
     }
 
     private async Task<ConversionResult> ProcessFileAsync(

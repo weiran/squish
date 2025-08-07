@@ -24,14 +24,17 @@ public class FileFinder : IFileFinder
         return await Task.Run(() =>
         {
             var videoFiles = new List<VideoFile>();
-
-            foreach (var extension in _videoExtensions)
+            var extensionSet = new HashSet<string>(_videoExtensions, StringComparer.OrdinalIgnoreCase);
+            
+            // Single enumeration of all files, filter by extension
+            var allFiles = _fileSystemWrapper.EnumerateFiles(directoryPath, "*.*", SearchOption.AllDirectories);
+            
+            foreach (var file in allFiles)
             {
-                var files = _fileSystemWrapper.EnumerateFiles(directoryPath, $"*{extension}", SearchOption.AllDirectories);
-                
-                foreach (var file in files)
+                try
                 {
-                    try
+                    var extension = Path.GetExtension(file);
+                    if (!string.IsNullOrEmpty(extension) && extensionSet.Contains(extension))
                     {
                         var fileSize = _fileSystemWrapper.GetFileSize(file);
                         videoFiles.Add(new VideoFile
@@ -40,11 +43,11 @@ public class FileFinder : IFileFinder
                             FileSize = fileSize
                         });
                     }
-                    catch (Exception ex) when (ex is FileNotFoundException || ex is UnauthorizedAccessException)
-                    {
-                        // Skip files that can't be accessed
-                        continue;
-                    }
+                }
+                catch (Exception ex) when (ex is FileNotFoundException || ex is UnauthorizedAccessException)
+                {
+                    // Skip files that can't be accessed
+                    continue;
                 }
             }
 
