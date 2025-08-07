@@ -82,6 +82,8 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
     {
         var mainTask = ctx.AddTask("[green]Processing files[/]", maxValue: 100);
 
+        var currentPhase = "";
+        
         var progressReporter = new Progress<ConversionProgress>(p =>
         {
             // Update main task progress with overall percentage
@@ -89,22 +91,38 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
             
             if (!string.IsNullOrEmpty(p.CurrentFile))
             {
-                // Handle discovery and inspection phases
-                if (p.CurrentFile.Contains("Discovering") || p.CurrentFile.Contains("Inspecting") || p.CurrentFile.StartsWith("Inspected:"))
+                // Handle discovery phase
+                if (p.CurrentFile.Contains("Discovering"))
                 {
-                    mainTask.Description = $"[green]{p.CurrentFile.EscapeMarkup()}[/]";
+                    if (currentPhase != "discovering")
+                    {
+                        currentPhase = "discovering";
+                        mainTask.Description = "[green]Discovering video files...[/]";
+                    }
                     return;
                 }
                 
-                // During conversion, show overall progress with current file info
-                if (p.CurrentFile.StartsWith("Completed:") || p.CurrentFile.Contains("conversion"))
+                // Handle inspection phase
+                if (p.CurrentFile.Contains("Inspecting") || p.CurrentFile.StartsWith("Inspected:"))
                 {
-                    mainTask.Description = $"[green]Converting files ({p.CompletedFiles}/{p.TotalFiles})[/] - {p.CurrentFile.EscapeMarkup()}";
+                    if (currentPhase != "inspecting")
+                    {
+                        currentPhase = "inspecting";
+                        mainTask.Description = $"[green]Inspecting video codecs[/]";
+                    }
                     return;
                 }
                 
-                // For individual file progress during conversion, update the main task description only
-                mainTask.Description = $"[green]Converting files ({p.CompletedFiles}/{p.TotalFiles})[/] - [blue]{Path.GetFileName(p.CurrentFile).EscapeMarkup()}[/] [dim]({p.Speed})[/]";
+                // Handle conversion phase
+                if (p.CurrentFile.StartsWith("Completed:") || p.CurrentFile.Contains("conversion") || (!p.CurrentFile.Contains("Discovering") && !p.CurrentFile.Contains("Inspecting") && !p.CurrentFile.StartsWith("Inspected:")))
+                {
+                    if (currentPhase != "converting")
+                    {
+                        currentPhase = "converting";
+                        mainTask.Description = "[green]Converting files[/]";
+                    }
+                    return;
+                }
             }
         });
 
