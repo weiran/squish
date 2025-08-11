@@ -4,5 +4,5 @@ namespace Squish.Core.Abstractions;
 
 public interface IVideoConverter
 {
-    Task<ConversionResult> ConvertAsync(VideoFile file, string basePath, ConversionOptions options, IProgress<ConversionProgress> progress);
+    Task<ConversionResult> ConvertAsync(VideoFile file, string basePath, TimeSpan duration, ConversionOptions options, IProgress<ConversionProgress> progress);
 }

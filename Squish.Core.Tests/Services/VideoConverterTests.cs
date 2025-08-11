@@ -33,7 +33,7 @@ public class VideoConverterTests
         var options = new ConversionOptions();
         var progress = new Progress<ConversionProgress>();
 
-        var act = async () => await _videoConverter.ConvertAsync(null!, "/test", options, progress);
+        var act = async () => await _videoConverter.ConvertAsync(null!, "/test", TimeSpan.FromSeconds(1), options, progress);
 
         await act.Should().ThrowAsync<ArgumentNullException>()
             .WithParameterName("file");
@@ -45,7 +45,7 @@ public class VideoConverterTests
         var videoFile = new VideoFile { FilePath = "/test/video.mp4" };
         var progress = new Progress<ConversionProgress>();
 
-        var act = async () => await _videoConverter.ConvertAsync(videoFile, "/test", null!, progress);
+        var act = async () => await _videoConverter.ConvertAsync(videoFile, "/test", TimeSpan.FromSeconds(1), null!, progress);
 
         await act.Should().ThrowAsync<ArgumentNullException>()
             .WithParameterName("options");
@@ -58,7 +58,7 @@ public class VideoConverterTests
         var options = new ConversionOptions();
         var progress = new Progress<ConversionProgress>();
 
-        var act = async () => await _videoConverter.ConvertAsync(videoFile, "/test", options, progress);
+        var act = async () => await _videoConverter.ConvertAsync(videoFile, "/test", TimeSpan.FromSeconds(1), options, progress);
 
         await act.Should().ThrowAsync<ArgumentException>()
             .WithParameterName("file");

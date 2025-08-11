@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Squish.Core.Abstractions;
 
@@ -53,5 +54,24 @@ public class VideoInspector : IVideoInspector
         }
 
         return "unknown";
+    }
+
+    public async Task<TimeSpan> GetVideoDurationAsync(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+            throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
+
+        var arguments = $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{filePath}\"";
+        var result = await _processWrapper.RunAsync("ffprobe", arguments);
+
+        if (result.ExitCode != 0)
+            throw new InvalidOperationException($"ffprobe failed with exit code {result.ExitCode}: {result.StandardError}");
+
+        if (double.TryParse(result.StandardOutput, NumberStyles.Any, CultureInfo.InvariantCulture, out var durationSeconds))
+        {
+            return TimeSpan.FromSeconds(durationSeconds);
+        }
+
+        throw new InvalidOperationException($"Failed to parse duration from ffprobe output: {result.StandardOutput}");
     }
 }

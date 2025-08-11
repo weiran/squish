@@ -257,8 +257,9 @@ public class JobRunner
                 tracker.Progress = p.Percentage;
                 tracker.Speed = p.Speed;
             });
-            
-            return await _videoConverter.ConvertAsync(file, basePath, options, fileProgressReporter);
+
+            var duration = await _videoInspector.GetVideoDurationAsync(file.FilePath);
+            return await _videoConverter.ConvertAsync(file, basePath, duration, options, fileProgressReporter);
         }
         finally
         {

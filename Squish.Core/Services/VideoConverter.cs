@@ -13,7 +13,6 @@ public class VideoConverter : IVideoConverter
     private readonly IProcessWrapper _processWrapper;
     private static readonly Regex ProgressRegex = new(@"time=(\d{2}):(\d{2}):(\d{2}\.\d{2})", RegexOptions.Compiled);
     private static readonly Regex SpeedRegex = new(@"speed=\s*(\d+(?:\.\d+)?)x", RegexOptions.Compiled);
-    private static readonly Regex DurationRegex = new(@"Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})", RegexOptions.Compiled);
     
     // Encoder constants
     private const string ENCODER_VIDEOTOOLBOX = "hevc_videotoolbox";  // Apple VideoToolbox HEVC encoder
@@ -30,7 +29,7 @@ public class VideoConverter : IVideoConverter
         _processWrapper = processWrapper ?? throw new ArgumentNullException(nameof(processWrapper));
     }
 
-    public async Task<ConversionResult> ConvertAsync(VideoFile file, string basePath, ConversionOptions options, IProgress<ConversionProgress> progress)
+    public async Task<ConversionResult> ConvertAsync(VideoFile file, string basePath, TimeSpan duration, ConversionOptions options, IProgress<ConversionProgress> progress)
     {
         ArgumentNullException.ThrowIfNull(file);
         ArgumentNullException.ThrowIfNull(options);
@@ -92,7 +91,6 @@ public class VideoConverter : IVideoConverter
             if (process == null)
                 throw new VideoConversionException("Failed to start ffmpeg process");
 
-            var duration = TimeSpan.Zero;
             var errorOutput = new List<string>();
             var hasEncounteredError = false;
 
@@ -109,12 +107,6 @@ public class VideoConverter : IVideoConverter
                     e.Data.Contains("Conversion failed"))
                 {
                     hasEncounteredError = true;
-                }
-
-                var durationMatch = DurationRegex.Match(e.Data);
-                if (durationMatch.Success)
-                {
-                    duration = ParseTimeSpan(durationMatch.Groups[1].Value, durationMatch.Groups[2].Value, durationMatch.Groups[3].Value);
                 }
 
                 var progressMatch = ProgressRegex.Match(e.Data);
@@ -215,7 +207,7 @@ public class VideoConverter : IVideoConverter
     {
         var args = new List<string>
         {
-            "-i", $"\"{inputPath}\"",
+            "-i", $"{inputPath}",
             "-c:a", "copy"
         };
 
@@ -253,7 +245,7 @@ public class VideoConverter : IVideoConverter
             args.Add("medium");
         }
         
-        args.AddRange(["-y", $"\"{outputPath}\""]);
+        args.AddRange(["-y", $"{outputPath}"]);
 
         return string.Join(" ", args);
     }
