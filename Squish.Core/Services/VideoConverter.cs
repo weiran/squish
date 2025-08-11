@@ -12,6 +12,7 @@ public class VideoConverter : IVideoConverter
 {
     private readonly IProcessWrapper _processWrapper;
     private readonly ILogger _logger;
+    private readonly IFileSystemWrapper _fileSystemWrapper;
     private static readonly Regex ProgressRegex = new(@"time=(\d{2}):(\d{2}):(\d{2}\.\d{2})", RegexOptions.Compiled);
     private static readonly Regex SpeedRegex = new(@"speed=\s*(\d+(?:\.\d+)?)x", RegexOptions.Compiled);
     
@@ -25,13 +26,14 @@ public class VideoConverter : IVideoConverter
     private const string CRF_NVENC = "32";         // NVIDIA NVENC HEVC encoder
     private const string CRF_SOFTWARE_X265 = "28"; // Software x265 encoder
 
-    public VideoConverter(IProcessWrapper processWrapper, ILogger logger)
+    public VideoConverter(IProcessWrapper processWrapper, ILogger logger, IFileSystemWrapper fileSystemWrapper)
     {
         _processWrapper = processWrapper ?? throw new ArgumentNullException(nameof(processWrapper));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _fileSystemWrapper = fileSystemWrapper ?? throw new ArgumentNullException(nameof(fileSystemWrapper));
     }
 
-    public async Task<ConversionResult> ConvertAsync(VideoFile file, string basePath, TimeSpan duration, ConversionOptions options, IProgress<ConversionProgress> progress)
+    public virtual async Task<ConversionResult> ConvertAsync(VideoFile file, string basePath, TimeSpan duration, ConversionOptions options, IProgress<ConversionProgress> progress)
     {
         ArgumentNullException.ThrowIfNull(file);
         ArgumentNullException.ThrowIfNull(options);
@@ -143,26 +145,26 @@ public class VideoConverter : IVideoConverter
             }
 
             // Verify output file was created and has content
-            if (!File.Exists(conversionOutputPath))
+            if (!_fileSystemWrapper.FileExists(conversionOutputPath))
                 throw new VideoConversionException("ffmpeg did not create output file");
 
-            var outputFileInfo = new FileInfo(conversionOutputPath);
+            var outputFileInfo = _fileSystemWrapper.GetFileInfo(conversionOutputPath);
             if (outputFileInfo.Length == 0)
                 throw new VideoConversionException("ffmpeg created empty output file");
 
             // If a temporary file was used, move it to the final destination
             if (tempOutputPath != null)
             {
-                File.Move(tempOutputPath, finalOutputPath, true);
+                _fileSystemWrapper.MoveFile(tempOutputPath, finalOutputPath, true);
             }
 
             // Preserve original file timestamps if requested
             if (options.PreserveTimestamps)
             {
-                var originalFileInfo = new FileInfo(file.FilePath);
-                File.SetCreationTime(finalOutputPath, originalFileInfo.CreationTime);
-                File.SetLastWriteTime(finalOutputPath, originalFileInfo.LastWriteTime);
-                File.SetLastAccessTime(finalOutputPath, originalFileInfo.LastAccessTime);
+                var originalFileInfo = _fileSystemWrapper.GetFileInfo(file.FilePath);
+                _fileSystemWrapper.SetCreationTime(finalOutputPath, originalFileInfo.CreationTime);
+                _fileSystemWrapper.SetLastWriteTime(finalOutputPath, originalFileInfo.LastWriteTime);
+                _fileSystemWrapper.SetLastAccessTime(finalOutputPath, originalFileInfo.LastAccessTime);
             }
 
             var newFileInfo = new FileInfo(finalOutputPath);
@@ -180,11 +182,11 @@ public class VideoConverter : IVideoConverter
         catch (Exception ex)
         {
             // Clean up the output file if an error occurred
-            if (File.Exists(conversionOutputPath))
+            if (_fileSystemWrapper.FileExists(conversionOutputPath))
             {
                 try
                 {
-                    File.Delete(conversionOutputPath);
+                    _fileSystemWrapper.DeleteFile(conversionOutputPath);
                 }
                 catch (Exception cleanupEx)
                 {
@@ -218,7 +220,7 @@ public class VideoConverter : IVideoConverter
         return result;
     }
 
-    private static List<string> BuildFfmpegArguments(string inputPath, string outputPath, ConversionOptions options)
+    protected virtual List<string> BuildFfmpegArguments(string inputPath, string outputPath, ConversionOptions options)
     {
         var args = new List<string>
         {
@@ -265,7 +267,7 @@ public class VideoConverter : IVideoConverter
         return args;
     }
 
-    private static string? GetGpuEncoder()
+    protected virtual string? GetGpuEncoder()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
@@ -276,7 +278,7 @@ public class VideoConverter : IVideoConverter
         return IsEncoderAvailable(ENCODER_NVENC) ? ENCODER_NVENC : null;
     }
 
-    private static bool IsEncoderAvailable(string encoderName)
+    protected virtual bool IsEncoderAvailable(string encoderName)
     {
         try
         {

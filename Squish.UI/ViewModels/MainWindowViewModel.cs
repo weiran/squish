@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Squish.Core;
+using Squish.Core.Abstractions;
 using Squish.Core.Model;
 using Squish.Core.Services;
 using Squish.UI.Services;
@@ -15,7 +15,7 @@ namespace Squish.UI.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
-    private readonly JobRunner _jobRunner;
+    private readonly IJobRunner _jobRunner;
     private readonly InMemoryLogger _logger;
     private readonly IFolderPickerService _folderPickerService;
 
@@ -58,7 +58,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _showResults;
 
-    public MainWindowViewModel(JobRunner jobRunner, InMemoryLogger logger, IFolderPickerService folderPickerService)
+    public MainWindowViewModel(IJobRunner jobRunner, InMemoryLogger logger, IFolderPickerService folderPickerService)
     {
         _jobRunner = jobRunner;
         _logger = logger;

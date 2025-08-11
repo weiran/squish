@@ -54,6 +54,7 @@ public partial class App : Application
         services.AddSingleton<InMemoryLogger>();
         services.AddTransient<ILogger>(provider => provider.GetRequiredService<InMemoryLogger>());
         services.AddTransient<JobRunner>();
+        services.AddTransient<IJobRunner>(provider => provider.GetRequiredService<JobRunner>());
 
         // Register UI services
         services.AddTransient<IFolderPickerService, FolderPickerService>();
