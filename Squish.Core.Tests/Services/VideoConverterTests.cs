@@ -10,21 +10,32 @@ namespace Squish.Core.Tests.Services;
 public class VideoConverterTests
 {
     private readonly Mock<IProcessWrapper> _mockProcessWrapper;
+    private readonly Mock<ILogger> _mockLogger;
     private readonly VideoConverter _videoConverter;
 
     public VideoConverterTests()
     {
         _mockProcessWrapper = new Mock<IProcessWrapper>();
-        _videoConverter = new VideoConverter(_mockProcessWrapper.Object);
+        _mockLogger = new Mock<ILogger>();
+        _videoConverter = new VideoConverter(_mockProcessWrapper.Object, _mockLogger.Object);
     }
 
     [Fact]
     public void Constructor_ThrowsArgumentNullException_WhenProcessWrapperIsNull()
     {
-        var act = () => new VideoConverter(null!);
+        var act = () => new VideoConverter(null!, _mockLogger.Object);
 
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("processWrapper");
+    }
+
+    [Fact]
+    public void Constructor_ThrowsArgumentNullException_WhenLoggerIsNull()
+    {
+        var act = () => new VideoConverter(_mockProcessWrapper.Object, null!);
+
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("logger");
     }
 
     [Fact]

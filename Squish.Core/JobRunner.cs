@@ -20,17 +20,20 @@ public class JobRunner
     private readonly IVideoInspector _videoInspector;
     private readonly IVideoConverter _videoConverter;
     private readonly IQueueManager _queueManager;
+    private readonly ILogger _logger;
 
     public JobRunner(
         IFileFinder fileFinder,
         IVideoInspector videoInspector,
         IVideoConverter videoConverter,
-        IQueueManager queueManager)
+        IQueueManager queueManager,
+        ILogger logger)
     {
         _fileFinder = fileFinder;
         _videoInspector = videoInspector;
         _videoConverter = videoConverter;
         _queueManager = queueManager;
+        _logger = logger;
     }
 
     public async Task<IEnumerable<ConversionResult>> RunAsync(
@@ -81,7 +84,7 @@ public class JobRunner
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Warning: Could not inspect {file.FilePath}: {ex.Message}");
+                _logger.LogWarning($"Could not inspect {file.FilePath}: {ex.Message}");
                 Interlocked.Increment(ref processedCount);
                 return null;
             }
@@ -191,7 +194,7 @@ public class JobRunner
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Task failed: {ex.Message}");
+                        _logger.LogError($"Task failed: {ex.Message}");
                     }
                     conversionTasks.Remove(completedTask);
                 }
@@ -220,7 +223,7 @@ public class JobRunner
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Task failed: {ex.Message}");
+                _logger.LogError($"Task failed: {ex.Message}");
             }
         }
         

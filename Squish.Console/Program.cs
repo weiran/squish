@@ -70,10 +70,13 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
     services.AddTransient<IVideoInspector, VideoInspector>();
     services.AddTransient<IVideoConverter, VideoConverter>();
     services.AddTransient<IQueueManager, QueueManager>();
+    services.AddSingleton<InMemoryLogger>();
+    services.AddTransient<ILogger>(provider => provider.GetRequiredService<InMemoryLogger>());
     services.AddTransient<JobRunner>();
 
     var serviceProvider = services.BuildServiceProvider();
     var jobRunner = serviceProvider.GetRequiredService<JobRunner>();
+    var logger = serviceProvider.GetRequiredService<InMemoryLogger>();
 
     var options = new ConversionOptions
     {
@@ -197,6 +200,22 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
         var failed = resultsList.Count(r => !r.Success);
 
         AnsiConsole.WriteLine();
+        
+        // Display any warnings or errors collected during processing
+        foreach (var warning in logger.Warnings)
+        {
+            AnsiConsole.MarkupLine($"[yellow]Warning:[/] {warning.EscapeMarkup()}");
+        }
+        
+        foreach (var error in logger.Errors)
+        {
+            AnsiConsole.MarkupLine($"[red]Error:[/] {error.EscapeMarkup()}");
+        }
+        
+        if (logger.Warnings.Any() || logger.Errors.Any())
+        {
+            AnsiConsole.WriteLine();
+        }
 
         if (listOnly)
         {

@@ -11,6 +11,7 @@ namespace Squish.Core.Services;
 public class VideoConverter : IVideoConverter
 {
     private readonly IProcessWrapper _processWrapper;
+    private readonly ILogger _logger;
     private static readonly Regex ProgressRegex = new(@"time=(\d{2}):(\d{2}):(\d{2}\.\d{2})", RegexOptions.Compiled);
     private static readonly Regex SpeedRegex = new(@"speed=\s*(\d+(?:\.\d+)?)x", RegexOptions.Compiled);
     
@@ -24,9 +25,10 @@ public class VideoConverter : IVideoConverter
     private const string CRF_NVENC = "40";         // NVIDIA NVENC HEVC encoder
     private const string CRF_SOFTWARE_X265 = "32"; // Software x265 encoder
 
-    public VideoConverter(IProcessWrapper processWrapper)
+    public VideoConverter(IProcessWrapper processWrapper, ILogger logger)
     {
         _processWrapper = processWrapper ?? throw new ArgumentNullException(nameof(processWrapper));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<ConversionResult> ConvertAsync(VideoFile file, string basePath, TimeSpan duration, ConversionOptions options, IProgress<ConversionProgress> progress)
@@ -177,7 +179,7 @@ public class VideoConverter : IVideoConverter
                 }
                 catch (Exception cleanupEx)
                 {
-                    Console.WriteLine($"Warning: Failed to delete output file {conversionOutputPath}: {cleanupEx.Message}");
+                    _logger.LogWarning($"Failed to delete output file {conversionOutputPath}: {cleanupEx.Message}");
                 }
             }
 
@@ -198,7 +200,7 @@ public class VideoConverter : IVideoConverter
             }
             catch (Exception disposeEx)
             {
-                Console.WriteLine($"Warning: Failed to dispose ffmpeg process: {disposeEx.Message}");
+                _logger.LogWarning($"Failed to dispose ffmpeg process: {disposeEx.Message}");
             }
 
             result.Duration = DateTime.UtcNow - startTime;
