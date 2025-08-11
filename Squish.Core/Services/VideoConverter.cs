@@ -40,6 +40,7 @@ public class VideoConverter : IVideoConverter
         var directory = Path.GetDirectoryName(file.FilePath);
         var tempOutputPath = Path.Combine(directory!, $"{fileWithoutExtension}.tmp{fileExtension}");
 
+        Process? process = null;
         try
         {
             var ffmpegArgs = BuildFfmpegArguments(file.FilePath, tempOutputPath, options);
@@ -54,20 +55,29 @@ public class VideoConverter : IVideoConverter
                 CreateNoWindow = true
             };
 
-            using var process = Process.Start(processStartInfo);
+            process = Process.Start(processStartInfo);
             if (process == null)
                 throw new VideoConversionException("Failed to start ffmpeg process");
 
             var duration = TimeSpan.Zero;
-            var progressReporter = new Progress<ConversionProgress>();
-
             var errorOutput = new List<string>();
+            var hasEncounteredError = false;
             
             process.ErrorDataReceived += (sender, e) =>
             {
                 if (string.IsNullOrEmpty(e.Data)) return;
                 
                 errorOutput.Add(e.Data);
+                
+                // Check for common ffmpeg error patterns early
+                if (e.Data.Contains("Invalid data found when processing input") ||
+                    e.Data.Contains("No such file or directory") ||
+                    e.Data.Contains("Permission denied") ||
+                    e.Data.Contains("Unable to choose an output format") ||
+                    e.Data.Contains("Conversion failed"))
+                {
+                    hasEncounteredError = true;
+                }
                 
                 if (duration == TimeSpan.Zero)
                 {
@@ -79,7 +89,7 @@ public class VideoConverter : IVideoConverter
                 }
 
                 var progressMatch = ProgressRegex.Match(e.Data);
-                if (progressMatch.Success && duration > TimeSpan.Zero)
+                if (progressMatch.Success && duration > TimeSpan.Zero && !hasEncounteredError)
                 {
                     var currentTime = ParseTimeSpan(progressMatch.Groups[1].Value, progressMatch.Groups[2].Value, progressMatch.Groups[3].Value);
                     var percentage = (currentTime.TotalSeconds / duration.TotalSeconds) * 100;
@@ -99,11 +109,19 @@ public class VideoConverter : IVideoConverter
             process.BeginErrorReadLine();
             await process.WaitForExitAsync();
 
-            if (process.ExitCode != 0)
+            if (process.ExitCode != 0 || hasEncounteredError)
             {
                 var errorMessage = string.Join(Environment.NewLine, errorOutput.TakeLast(5));
                 throw new VideoConversionException($"ffmpeg failed with exit code {process.ExitCode}: {errorMessage}");
             }
+
+            // Verify temporary file was created and has content
+            if (!File.Exists(tempOutputPath))
+                throw new VideoConversionException("ffmpeg did not create output file");
+
+            var tempFileInfo = new FileInfo(tempOutputPath);
+            if (tempFileInfo.Length == 0)
+                throw new VideoConversionException("ffmpeg created empty output file");
 
             File.Move(tempOutputPath, file.FilePath, true);
 
@@ -113,17 +131,40 @@ public class VideoConverter : IVideoConverter
         }
         catch (Exception ex)
         {
+            // Clean up temporary file if it exists
             if (File.Exists(tempOutputPath))
-                File.Delete(tempOutputPath);
+            {
+                try
+                {
+                    File.Delete(tempOutputPath);
+                }
+                catch (Exception cleanupEx)
+                {
+                    // Log cleanup failure but don't override the original exception
+                    Console.WriteLine($"Warning: Failed to delete temporary file {tempOutputPath}: {cleanupEx.Message}");
+                }
+            }
 
             result.Success = false;
             result.ErrorMessage = ex.Message;
 
             if (ex is not VideoConversionException)
                 throw new VideoConversionException($"Conversion failed for {file.FilePath}", ex);
+            
+            throw;
         }
         finally
         {
+            // Ensure process is properly disposed
+            try
+            {
+                process?.Dispose();
+            }
+            catch (Exception disposeEx)
+            {
+                Console.WriteLine($"Warning: Failed to dispose ffmpeg process: {disposeEx.Message}");
+            }
+
             result.Duration = DateTime.UtcNow - startTime;
             progress?.Report(new ConversionProgress
             {

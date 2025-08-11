@@ -1,8 +1,18 @@
 using Squish.Core.Abstractions;
 using Squish.Core.Model;
 using Squish.Core.Services;
+using System.Collections.Concurrent;
 
 namespace Squish.Core;
+
+// Helper class to track individual file conversion progress
+internal class FileProgressTracker
+{
+    public string FilePath { get; set; } = string.Empty;
+    public double Progress { get; set; }
+    public string Speed { get; set; } = string.Empty;
+    public bool IsCompleted { get; set; }
+}
 
 public class JobRunner
 {
@@ -106,6 +116,33 @@ public class JobRunner
         var conversionTasks = new List<Task<ConversionResult>>();
         var totalFiles = filesToProcess.Count;
         
+        // Track individual file progress
+        var fileProgressTrackers = new ConcurrentDictionary<string, FileProgressTracker>();
+        var progressUpdateTimer = new Timer(_ => UpdateOverallProgress(), null, TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500));
+        
+        void UpdateOverallProgress()
+        {
+            var trackers = fileProgressTrackers.Values.ToList();
+            var completedCount = trackers.Count(t => t.IsCompleted);
+            var partialProgress = trackers.Where(t => !t.IsCompleted).Sum(t => t.Progress / 100.0);
+            
+            var currentFiles = trackers.Where(t => !t.IsCompleted && t.Progress > 0)
+                                      .Select(t => $"{Path.GetFileName(t.FilePath)} ({t.Progress:F0}%)")
+                                      .ToList();
+            
+            var currentFileDisplay = currentFiles.Any() 
+                ? string.Join(", ", currentFiles.Take(2)) + (currentFiles.Count > 2 ? "..." : "")
+                : "Processing...";
+
+            progress?.Report(new ConversionProgress
+            {
+                TotalFiles = totalFiles,
+                CompletedFiles = completedCount,
+                PartialProgress = partialProgress,
+                CurrentFile = currentFileDisplay
+            });
+        }
+        
         // Report initial conversion progress
         progress?.Report(new ConversionProgress
         {
@@ -123,7 +160,7 @@ public class JobRunner
                 var file = _queueManager.Dequeue();
                 if (file == null) break;
 
-                var task = ProcessFileAsync(file, options, progress, conversionSemaphore, cancellationToken);
+                var task = ProcessFileAsync(file, options, fileProgressTrackers, conversionSemaphore, cancellationToken);
                 conversionTasks.Add(task);
             }
 
@@ -137,13 +174,12 @@ public class JobRunner
                         var result = await completedTask;
                         conversionResults.Add(result);
                         
-                        // Report overall progress after each file completion
-                        progress?.Report(new ConversionProgress
+                        // Mark file as completed in tracker
+                        if (fileProgressTrackers.TryGetValue(result.FilePath, out var tracker))
                         {
-                            TotalFiles = totalFiles,
-                            CompletedFiles = conversionResults.Count,
-                            CurrentFile = $"Completed: {Path.GetFileName(result.FilePath)}"
-                        });
+                            tracker.IsCompleted = true;
+                            tracker.Progress = 100;
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -155,7 +191,7 @@ public class JobRunner
 
             if (conversionTasks.Any(t => !t.IsCompleted))
             {
-                await Task.Delay(100, cancellationToken);
+                await Task.Delay(200, cancellationToken);
             }
         }
 
@@ -166,12 +202,23 @@ public class JobRunner
             {
                 var result = await task;
                 conversionResults.Add(result);
+                
+                // Mark file as completed in tracker
+                if (fileProgressTrackers.TryGetValue(result.FilePath, out var tracker))
+                {
+                    tracker.IsCompleted = true;
+                    tracker.Progress = 100;
+                }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Task failed: {ex.Message}");
             }
         }
+        
+        // Dispose timer and report final progress
+        progressUpdateTimer?.Dispose();
+        UpdateOverallProgress();
 
         return conversionResults;
     }
@@ -179,14 +226,30 @@ public class JobRunner
     private async Task<ConversionResult> ProcessFileAsync(
         VideoFile file,
         ConversionOptions options,
-        IProgress<ConversionProgress>? progress,
+        ConcurrentDictionary<string, FileProgressTracker> progressTrackers,
         SemaphoreSlim semaphore,
         CancellationToken cancellationToken)
     {
         await semaphore.WaitAsync(cancellationToken);
         try
         {
-            return await _videoConverter.ConvertAsync(file, options, progress ?? new Progress<ConversionProgress>());
+            // Initialize progress tracker for this file
+            var tracker = new FileProgressTracker
+            {
+                FilePath = file.FilePath,
+                Progress = 0,
+                IsCompleted = false
+            };
+            progressTrackers[file.FilePath] = tracker;
+            
+            // Create a progress reporter that updates the tracker
+            var fileProgressReporter = new Progress<ConversionProgress>(p =>
+            {
+                tracker.Progress = p.Percentage;
+                tracker.Speed = p.Speed;
+            });
+            
+            return await _videoConverter.ConvertAsync(file, options, fileProgressReporter);
         }
         finally
         {

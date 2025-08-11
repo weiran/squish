@@ -9,5 +9,8 @@ public class ConversionProgress
     // Overall progress tracking
     public int TotalFiles { get; set; }
     public int CompletedFiles { get; set; }
-    public double OverallPercentage => TotalFiles > 0 ? (double)CompletedFiles / TotalFiles * 100 : 0;
+    public double PartialProgress { get; set; } // Progress of files currently being processed
+    
+    // Calculate overall percentage including partial progress of active conversions
+    public double OverallPercentage => TotalFiles > 0 ? (CompletedFiles + PartialProgress) / TotalFiles * 100 : 0;
 }
