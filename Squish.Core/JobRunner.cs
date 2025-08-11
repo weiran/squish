@@ -109,7 +109,7 @@ public class JobRunner
             });
         }
 
-        ((QueueManager)_queueManager).EnqueueRange(filesToProcess);
+        _queueManager.EnqueueRange(filesToProcess);
 
         var conversionResults = new List<ConversionResult>();
         var conversionSemaphore = new SemaphoreSlim(options.ParallelJobs, options.ParallelJobs);
@@ -165,7 +165,7 @@ public class JobRunner
 
             while (_queueManager.Count > 0 && conversionTasks.Count(t => !t.IsCompleted) < options.ParallelJobs)
             {
-                var file = _queueManager.Dequeue();
+                var file = await _queueManager.DequeueAsync();
                 if (file == null) break;
 
                 var task = ProcessFileAsync(file, directoryPath, options, fileProgressTrackers, conversionSemaphore, cancellationToken);

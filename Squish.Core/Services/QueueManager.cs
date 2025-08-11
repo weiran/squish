@@ -8,33 +8,65 @@ public class QueueManager : IQueueManager
 {
     private readonly ConcurrentQueue<VideoFile> _queue = new();
     private int _count = 0;
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
 
-    public void Enqueue(VideoFile file)
+    public async Task EnqueueAsync(VideoFile file)
     {
         ArgumentNullException.ThrowIfNull(file);
-        _queue.Enqueue(file);
-        Interlocked.Increment(ref _count);
+        await _semaphore.WaitAsync();
+        try
+        {
+            _queue.Enqueue(file);
+            _count++;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
     }
 
-    public VideoFile? Dequeue()
+    public async Task<VideoFile?> DequeueAsync()
     {
-        if (_queue.TryDequeue(out var file))
+        await _semaphore.WaitAsync();
+        try
         {
-            Interlocked.Decrement(ref _count);
-            return file;
+            if (_queue.TryDequeue(out var file))
+            {
+                _count--;
+                return file;
+            }
+            return null;
         }
-        return null;
+        finally
+        {
+            _semaphore.Release();
+        }
     }
 
     public int Count => _count;
 
-    public void EnqueueRange(IEnumerable<VideoFile> files)
+    public async Task EnqueueRangeAsync(IEnumerable<VideoFile> files)
     {
         ArgumentNullException.ThrowIfNull(files);
         var sortedFiles = files.OrderByDescending(f => f.FileSize);
         foreach (var file in sortedFiles)
         {
-            Enqueue(file);
+            await EnqueueAsync(file);
         }
+    }
+
+    public void Enqueue(VideoFile file)
+    {
+        EnqueueAsync(file).GetAwaiter().GetResult();
+    }
+
+    public VideoFile? Dequeue()
+    {
+        return DequeueAsync().GetAwaiter().GetResult();
+    }
+
+    public void EnqueueRange(IEnumerable<VideoFile> files)
+    {
+        EnqueueRangeAsync(files).GetAwaiter().GetResult();
     }
 }

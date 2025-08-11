@@ -16,48 +16,48 @@ public class QueueManagerTests
     }
 
     [Fact]
-    public void Enqueue_AddsFileToQueue_AndIncrementsCount()
+    public async Task Enqueue_AddsFileToQueue_AndIncrementsCount()
     {
         var queueManager = new QueueManager();
         var videoFile = new VideoFile { FilePath = "/test/video.mp4", FileSize = 1000 };
 
-        queueManager.Enqueue(videoFile);
+        await queueManager.EnqueueAsync(videoFile);
 
         queueManager.Count.Should().Be(1);
     }
 
     [Fact]
-    public void Enqueue_MultipleFiles_IncrementsCountCorrectly()
+    public async Task Enqueue_MultipleFiles_IncrementsCountCorrectly()
     {
         var queueManager = new QueueManager();
         var file1 = new VideoFile { FilePath = "/test/video1.mp4", FileSize = 1000 };
         var file2 = new VideoFile { FilePath = "/test/video2.mp4", FileSize = 2000 };
 
-        queueManager.Enqueue(file1);
-        queueManager.Enqueue(file2);
+        await queueManager.EnqueueAsync(file1);
+        await queueManager.EnqueueAsync(file2);
 
         queueManager.Count.Should().Be(2);
     }
 
     [Fact]
-    public void Dequeue_ReturnsNull_WhenQueueIsEmpty()
+    public async Task Dequeue_ReturnsNull_WhenQueueIsEmpty()
     {
         var queueManager = new QueueManager();
 
-        var result = queueManager.Dequeue();
+        var result = await queueManager.DequeueAsync();
 
         result.Should().BeNull();
         queueManager.Count.Should().Be(0);
     }
 
     [Fact]
-    public void Dequeue_ReturnsFile_WhenQueueHasItems()
+    public async Task Dequeue_ReturnsFile_WhenQueueHasItems()
     {
         var queueManager = new QueueManager();
         var videoFile = new VideoFile { FilePath = "/test/video.mp4", FileSize = 1000 };
-        queueManager.Enqueue(videoFile);
+        await queueManager.EnqueueAsync(videoFile);
 
-        var result = queueManager.Dequeue();
+        var result = await queueManager.DequeueAsync();
 
         result.Should().NotBeNull();
         result!.FilePath.Should().Be("/test/video.mp4");
@@ -66,17 +66,17 @@ public class QueueManagerTests
     }
 
     [Fact]
-    public void Dequeue_ReturnsFilesInFifoOrder()
+    public async Task Dequeue_ReturnsFilesInFifoOrder()
     {
         var queueManager = new QueueManager();
         var file1 = new VideoFile { FilePath = "/test/video1.mp4", FileSize = 1000 };
         var file2 = new VideoFile { FilePath = "/test/video2.mp4", FileSize = 2000 };
 
-        queueManager.Enqueue(file1);
-        queueManager.Enqueue(file2);
+        await queueManager.EnqueueAsync(file1);
+        await queueManager.EnqueueAsync(file2);
 
-        var result1 = queueManager.Dequeue();
-        var result2 = queueManager.Dequeue();
+        var result1 = await queueManager.DequeueAsync();
+        var result2 = await queueManager.DequeueAsync();
 
         result1!.FilePath.Should().Be("/test/video1.mp4");
         result2!.FilePath.Should().Be("/test/video2.mp4");
@@ -84,7 +84,7 @@ public class QueueManagerTests
     }
 
     [Fact]
-    public void EnqueueRange_AddsMultipleFiles_OrderedBySize()
+    public async Task EnqueueRange_AddsMultipleFiles_OrderedBySize()
     {
         var queueManager = new QueueManager();
         var files = new[]
@@ -99,9 +99,9 @@ public class QueueManagerTests
         queueManager.Count.Should().Be(3);
         
         // Should be dequeued in the order they were added (largest first due to sorting)
-        var first = queueManager.Dequeue();
-        var second = queueManager.Dequeue();
-        var third = queueManager.Dequeue();
+        var first = await queueManager.DequeueAsync();
+        var second = await queueManager.DequeueAsync();
+        var third = await queueManager.DequeueAsync();
 
         first!.FilePath.Should().Be("/test/large.mp4");
         second!.FilePath.Should().Be("/test/medium.mp4");
@@ -129,10 +129,10 @@ public class QueueManagerTests
         for (int i = 0; i < 100; i++)
         {
             var index = i;
-            tasks.Add(Task.Run(() =>
+            tasks.Add(Task.Run(async () =>
             {
                 var file = new VideoFile { FilePath = $"/test/video{index}.mp4", FileSize = index };
-                queueManager.Enqueue(file);
+                await queueManager.EnqueueAsync(file);
             }));
         }
 
@@ -154,19 +154,19 @@ public class QueueManagerTests
         for (int i = 0; i < 50; i++)
         {
             var index = i;
-            enqueueTasks.Add(Task.Run(() =>
+            enqueueTasks.Add(Task.Run(async () =>
             {
                 var file = new VideoFile { FilePath = $"/test/video{index}.mp4", FileSize = index };
-                queueManager.Enqueue(file);
+                await queueManager.EnqueueAsync(file);
             }));
         }
 
         // Dequeue 25 files
         for (int i = 0; i < 25; i++)
         {
-            dequeueTasks.Add(Task.Run(() =>
+            dequeueTasks.Add(Task.Run(async () =>
             {
-                var item = queueManager.Dequeue();
+                var item = await queueManager.DequeueAsync();
                 lock (lockObject)
                 {
                     dequeuedItems.Add(item);
