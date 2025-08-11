@@ -82,17 +82,16 @@ public class FileFinderTests
     public async Task FindFilesAsync_ReturnsVideoFiles_WhenVideoFilesFound()
     {
         var directoryPath = "/test/path";
-        var mp4Files = new[] { "/test/path/video1.mp4", "/test/path/video2.mp4" };
-        var mkvFiles = new[] { "/test/path/video3.mkv" };
+        var allFiles = new[] { 
+            "/test/path/video1.mp4", 
+            "/test/path/video2.mp4", 
+            "/test/path/video3.mkv",
+            "/test/path/document.txt" // non-video file to test filtering
+        };
 
         _mockFileSystem.Setup(x => x.DirectoryExists(directoryPath)).Returns(true);
-        
-        _mockFileSystem.Setup(x => x.EnumerateFiles(directoryPath, "*.mp4", SearchOption.AllDirectories))
-            .Returns(mp4Files);
-        _mockFileSystem.Setup(x => x.EnumerateFiles(directoryPath, "*.mkv", SearchOption.AllDirectories))
-            .Returns(mkvFiles);
-        _mockFileSystem.Setup(x => x.EnumerateFiles(directoryPath, It.IsRegex(@"\*\.(avi|mov|wmv|flv|webm|m4v)"), SearchOption.AllDirectories))
-            .Returns(Array.Empty<string>());
+        _mockFileSystem.Setup(x => x.EnumerateFiles(directoryPath, "*.*", SearchOption.AllDirectories))
+            .Returns(allFiles);
 
         _mockFileSystem.Setup(x => x.GetFileSize("/test/path/video1.mp4")).Returns(1000);
         _mockFileSystem.Setup(x => x.GetFileSize("/test/path/video2.mp4")).Returns(2000);
@@ -113,10 +112,8 @@ public class FileFinderTests
         var files = new[] { "/test/path/small.mp4", "/test/path/large.mp4", "/test/path/medium.mp4" };
 
         _mockFileSystem.Setup(x => x.DirectoryExists(directoryPath)).Returns(true);
-        _mockFileSystem.Setup(x => x.EnumerateFiles(directoryPath, "*.mp4", SearchOption.AllDirectories))
+        _mockFileSystem.Setup(x => x.EnumerateFiles(directoryPath, "*.*", SearchOption.AllDirectories))
             .Returns(files);
-        _mockFileSystem.Setup(x => x.EnumerateFiles(directoryPath, It.IsRegex(@"\*\.(mkv|avi|mov|wmv|flv|webm|m4v)"), SearchOption.AllDirectories))
-            .Returns(Array.Empty<string>());
 
         _mockFileSystem.Setup(x => x.GetFileSize("/test/path/small.mp4")).Returns(500);
         _mockFileSystem.Setup(x => x.GetFileSize("/test/path/large.mp4")).Returns(2000);
@@ -141,10 +138,8 @@ public class FileFinderTests
         var files = new[] { "/test/path/accessible.mp4", "/test/path/inaccessible.mp4" };
 
         _mockFileSystem.Setup(x => x.DirectoryExists(directoryPath)).Returns(true);
-        _mockFileSystem.Setup(x => x.EnumerateFiles(directoryPath, "*.mp4", SearchOption.AllDirectories))
+        _mockFileSystem.Setup(x => x.EnumerateFiles(directoryPath, "*.*", SearchOption.AllDirectories))
             .Returns(files);
-        _mockFileSystem.Setup(x => x.EnumerateFiles(directoryPath, It.IsRegex(@"\*\.(mkv|avi|mov|wmv|flv|webm|m4v)"), SearchOption.AllDirectories))
-            .Returns(Array.Empty<string>());
 
         _mockFileSystem.Setup(x => x.GetFileSize("/test/path/accessible.mp4")).Returns(1000);
         _mockFileSystem.Setup(x => x.GetFileSize("/test/path/inaccessible.mp4"))
@@ -163,10 +158,8 @@ public class FileFinderTests
         var files = new[] { "/test/path/accessible.mp4", "/test/path/unauthorized.mp4" };
 
         _mockFileSystem.Setup(x => x.DirectoryExists(directoryPath)).Returns(true);
-        _mockFileSystem.Setup(x => x.EnumerateFiles(directoryPath, "*.mp4", SearchOption.AllDirectories))
+        _mockFileSystem.Setup(x => x.EnumerateFiles(directoryPath, "*.*", SearchOption.AllDirectories))
             .Returns(files);
-        _mockFileSystem.Setup(x => x.EnumerateFiles(directoryPath, It.IsRegex(@"\*\.(mkv|avi|mov|wmv|flv|webm|m4v)"), SearchOption.AllDirectories))
-            .Returns(Array.Empty<string>());
 
         _mockFileSystem.Setup(x => x.GetFileSize("/test/path/accessible.mp4")).Returns(1000);
         _mockFileSystem.Setup(x => x.GetFileSize("/test/path/unauthorized.mp4"))
@@ -179,20 +172,38 @@ public class FileFinderTests
     }
 
     [Fact]
-    public async Task FindFilesAsync_SearchesAllVideoExtensions()
+    public async Task FindFilesAsync_FiltersAllVideoExtensions()
     {
         var directoryPath = "/test/path";
-        var expectedExtensions = new[] { ".mkv", ".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm", ".m4v" };
+        var allFiles = new[] { 
+            "/test/path/video.mkv",
+            "/test/path/video.mp4", 
+            "/test/path/video.avi", 
+            "/test/path/video.mov", 
+            "/test/path/video.wmv", 
+            "/test/path/video.flv", 
+            "/test/path/video.webm", 
+            "/test/path/video.m4v",
+            "/test/path/document.txt",
+            "/test/path/image.jpg"
+        };
 
         _mockFileSystem.Setup(x => x.DirectoryExists(directoryPath)).Returns(true);
-        _mockFileSystem.Setup(x => x.EnumerateFiles(directoryPath, It.IsAny<string>(), SearchOption.AllDirectories))
-            .Returns(Array.Empty<string>());
+        _mockFileSystem.Setup(x => x.EnumerateFiles(directoryPath, "*.*", SearchOption.AllDirectories))
+            .Returns(allFiles);
 
-        await _fileFinder.FindFilesAsync(directoryPath);
-
-        foreach (var extension in expectedExtensions)
+        // Mock file sizes for video files only
+        for (int i = 0; i < 8; i++)
         {
-            _mockFileSystem.Verify(x => x.EnumerateFiles(directoryPath, $"*{extension}", SearchOption.AllDirectories), Times.Once);
+            _mockFileSystem.Setup(x => x.GetFileSize(allFiles[i])).Returns(1000 + i * 100);
         }
+
+        var result = await _fileFinder.FindFilesAsync(directoryPath);
+
+        // Should find all 8 video files, excluding txt and jpg files
+        result.Should().HaveCount(8);
+        
+        // Verify it calls EnumerateFiles with *.* pattern exactly once
+        _mockFileSystem.Verify(x => x.EnumerateFiles(directoryPath, "*.*", SearchOption.AllDirectories), Times.Once);
     }
 }

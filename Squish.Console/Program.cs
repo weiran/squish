@@ -103,6 +103,7 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
     await progress.StartAsync(async ctx =>
     {
         var mainTask = ctx.AddTask("[green]Processing files[/]", maxValue: 100);
+        var fileTasks = new Dictionary<string, ProgressTask>();
 
         var currentPhase = "";
         
@@ -135,14 +136,47 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
                     return;
                 }
                 
-                // Handle conversion phase
-                if (p.CurrentFile.StartsWith("Completed:") || p.CurrentFile.Contains("conversion") || (!p.CurrentFile.Contains("Discovering") && !p.CurrentFile.Contains("Inspecting") && !p.CurrentFile.StartsWith("Inspected:")))
+                // Handle conversion phase - show individual file progress bars
+                if (p.ActiveConversions.Any() || currentPhase == "converting")
                 {
                     if (currentPhase != "converting")
                     {
                         currentPhase = "converting";
-                        mainTask.Description = "[green]Converting files[/]";
+                        mainTask.Description = $"[green]Converting {p.CompletedFiles}/{p.TotalFiles} files[/]";
                     }
+                    else
+                    {
+                        mainTask.Description = $"[green]Converting {p.CompletedFiles}/{p.TotalFiles} files[/]";
+                    }
+                    
+                    // Update individual file progress bars
+                    foreach (var (filePath, fileProgress) in p.ActiveConversions)
+                    {
+                        if (!fileTasks.ContainsKey(filePath))
+                        {
+                            var taskDescription = $"[cyan]{fileProgress.FileName}[/]";
+                            fileTasks[filePath] = ctx.AddTask(taskDescription, maxValue: 100);
+                        }
+                        
+                        var task = fileTasks[filePath];
+                        task.Value = fileProgress.Progress;
+                        
+                        // Update description with speed info if available
+                        if (!string.IsNullOrEmpty(fileProgress.Speed) && fileProgress.Speed != "0x")
+                        {
+                            task.Description = $"[cyan]{fileProgress.FileName}[/] [dim]({fileProgress.Speed})[/]";
+                        }
+                    }
+                    
+                    // Remove completed tasks that are no longer active
+                    var completedTasks = fileTasks.Where(kvp => !p.ActiveConversions.ContainsKey(kvp.Key)).ToList();
+                    foreach (var (filePath, task) in completedTasks)
+                    {
+                        task.Value = 100;
+                        task.StopTask();
+                        fileTasks.Remove(filePath);
+                    }
+                    
                     return;
                 }
             }
@@ -150,6 +184,13 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
 
         var results = await jobRunner.RunAsync(directory, options, progressReporter);
         mainTask.Value = 100;
+        
+        // Complete any remaining file tasks
+        foreach (var task in fileTasks.Values)
+        {
+            task.Value = 100;
+            task.StopTask();
+        }
 
         var resultsList = results.ToList();
         var successful = resultsList.Count(r => r.Success);

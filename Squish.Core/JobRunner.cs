@@ -126,12 +126,19 @@ public class JobRunner
             var completedCount = trackers.Count(t => t.IsCompleted);
             var partialProgress = trackers.Where(t => !t.IsCompleted).Sum(t => t.Progress / 100.0);
             
-            var currentFiles = trackers.Where(t => !t.IsCompleted && t.Progress > 0)
-                                      .Select(t => $"{Path.GetFileName(t.FilePath)} ({t.Progress:F0}%)")
-                                      .ToList();
+            // Build active conversions dictionary for individual progress bars
+            var activeConversions = trackers.Where(t => !t.IsCompleted && t.Progress > 0)
+                                          .ToDictionary(t => t.FilePath, t => new FileConversionProgress
+                                          {
+                                              FilePath = t.FilePath,
+                                              FileName = Path.GetFileName(t.FilePath),
+                                              Progress = t.Progress,
+                                              Speed = t.Speed,
+                                              IsActive = true
+                                          });
             
-            var currentFileDisplay = currentFiles.Any() 
-                ? string.Join(", ", currentFiles.Take(2)) + (currentFiles.Count > 2 ? "..." : "")
+            var currentFileDisplay = activeConversions.Any() 
+                ? string.Join(", ", activeConversions.Values.Take(2).Select(f => $"{f.FileName} ({f.Progress:F0}%)")) + (activeConversions.Count > 2 ? "..." : "")
                 : "Processing...";
 
             progress?.Report(new ConversionProgress
@@ -139,7 +146,8 @@ public class JobRunner
                 TotalFiles = totalFiles,
                 CompletedFiles = completedCount,
                 PartialProgress = partialProgress,
-                CurrentFile = currentFileDisplay
+                CurrentFile = currentFileDisplay,
+                ActiveConversions = activeConversions
             });
         }
         

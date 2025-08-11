@@ -11,6 +11,18 @@ public class ConversionProgress
     public int CompletedFiles { get; set; }
     public double PartialProgress { get; set; } // Progress of files currently being processed
     
+    // Individual file progress tracking
+    public Dictionary<string, FileConversionProgress> ActiveConversions { get; set; } = new();
+    
     // Calculate overall percentage including partial progress of active conversions
     public double OverallPercentage => TotalFiles > 0 ? (CompletedFiles + PartialProgress) / TotalFiles * 100 : 0;
+}
+
+public class FileConversionProgress
+{
+    public string FilePath { get; set; } = string.Empty;
+    public string FileName { get; set; } = string.Empty;
+    public double Progress { get; set; }
+    public string Speed { get; set; } = string.Empty;
+    public bool IsActive { get; set; } = true;
 }

@@ -14,6 +14,16 @@ public class VideoConverter : IVideoConverter
     private static readonly Regex ProgressRegex = new(@"time=(\d{2}):(\d{2}):(\d{2}\.\d{2})", RegexOptions.Compiled);
     private static readonly Regex SpeedRegex = new(@"speed=\s*(\d+(?:\.\d+)?)x", RegexOptions.Compiled);
     private static readonly Regex DurationRegex = new(@"Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})", RegexOptions.Compiled);
+    
+    // Encoder constants
+    private const string ENCODER_VIDEOTOOLBOX = "hevc_videotoolbox";  // Apple VideoToolbox HEVC encoder
+    private const string ENCODER_NVENC = "hevc_nvenc";                // NVIDIA NVENC HEVC encoder
+    private const string ENCODER_SOFTWARE_X265 = "libx265";           // Software x265 encoder
+    
+    // CRF (Constant Rate Factor) constants for different encoders
+    private const string CRF_VIDEOTOOLBOX = "50";  // Apple VideoToolbox HEVC encoder
+    private const string CRF_NVENC = "40";         // NVIDIA NVENC HEVC encoder
+    private const string CRF_SOFTWARE_X265 = "32"; // Software x265 encoder
 
     public VideoConverter(IProcessWrapper processWrapper)
     {
@@ -205,29 +215,41 @@ public class VideoConverter : IVideoConverter
             "-c:a", "copy"
         };
 
+        string encoder;
+        string crfValue;
+        
         if (options.UseGpu)
         {
             var gpuEncoder = GetGpuEncoder();
             if (!string.IsNullOrEmpty(gpuEncoder))
             {
-                args.AddRange(["-c:v", gpuEncoder]);
+                encoder = gpuEncoder;
+                // Hardware encoders typically need higher CRF values for same compression
+                crfValue = gpuEncoder.Contains("videotoolbox") ? CRF_VIDEOTOOLBOX : CRF_NVENC;
             }
             else
             {
-                args.AddRange(["-c:v", "libx265"]);
+                encoder = ENCODER_SOFTWARE_X265;
+                crfValue = CRF_SOFTWARE_X265;
             }
         }
         else
         {
-            args.AddRange(["-c:v", "libx265"]);
+            encoder = ENCODER_SOFTWARE_X265;
+            crfValue = CRF_SOFTWARE_X265;
         }
 
-        args.AddRange([
-            "-crf", "32",
-            "-preset", "medium",
-            "-y",
-            $"\"{outputPath}\""
-        ]);
+        args.AddRange(["-c:v", encoder]);
+        args.AddRange(["-crf", crfValue]);
+        
+        // Add preset if not using hardware encoder
+        if (!encoder.Contains("videotoolbox") && !encoder.Contains("nvenc"))
+        {
+            args.Add("-preset");
+            args.Add("medium");
+        }
+        
+        args.AddRange(["-y", $"\"{outputPath}\""]);
 
         return string.Join(" ", args);
     }
@@ -236,10 +258,10 @@ public class VideoConverter : IVideoConverter
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            return "hevc_videotoolbox";
+            return ENCODER_VIDEOTOOLBOX;
         }
 
-        return HasNvidiaGpu() ? "hevc_nvenc" : null;
+        return HasNvidiaGpu() ? ENCODER_NVENC : null;
     }
 
     private static bool HasNvidiaGpu()
