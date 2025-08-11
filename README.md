@@ -10,6 +10,7 @@ A C# utility designed to reduce video file sizes through reencoding and compress
 - Parallel processing for faster conversion
 - Real-time progress tracking with partial progress updates during conversion
 - Output folder support to preserve original files
+- Timestamp preservation (preserves original file creation/modification dates by default)
 - Rich console UI with progress bars
 - Comprehensive error handling with robust temporary file cleanup
 
@@ -45,6 +46,7 @@ squish [OPTIONS] <directory>
 | `-j` | `--jobs N` | Number of parallel encoding jobs (default: auto-detect) |
 | `-n` | `--limit N` | Limit number of files to convert (default: all) |
 | `-o` | `--output <folder>` | Output folder for converted files (preserves originals) |
+| | `--use-current-timestamps` | Use current date/time for converted files instead of preserving original timestamps |
 | `-h` | `--help` | Show help message |
 
 ### Examples
@@ -67,6 +69,9 @@ squish --limit 10 /path/to/videos
 
 # Convert with output folder, limiting parallel jobs
 squish --output /path/to/output --jobs 2 --limit 5 /path/to/videos
+
+# Use current timestamps instead of preserving original file dates
+squish --use-current-timestamps --output /path/to/converted /path/to/videos
 ```
 
 ## Prerequisites
