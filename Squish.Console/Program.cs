@@ -27,21 +27,40 @@ var limitOption = new Option<int?>(
     aliases: ["-n", "--limit"],
     description: "Limit number of files to convert");
 
+var outputOption = new Option<string?>(
+    aliases: ["-o", "--output"],
+    description: "Output folder for converted files (preserves originals)");
+
 var rootCommand = new RootCommand("Squish - Video compression utility using H.265/HEVC encoding")
 {
     directoryArgument,
     listOnlyOption,
     cpuOnlyOption,
     jobsOption,
-    limitOption
+    limitOption,
+    outputOption
 };
 
-rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int jobs, int? limit) =>
+rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int jobs, int? limit, string? output) =>
 {
     if (!Directory.Exists(directory))
     {
         AnsiConsole.MarkupLine("[red]Error: Directory does not exist[/]");
         Environment.Exit(1);
+    }
+
+    // Validate output folder if specified
+    if (!string.IsNullOrWhiteSpace(output))
+    {
+        try
+        {
+            Directory.CreateDirectory(output);
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Error: Cannot create output directory '{output.EscapeMarkup()}': {ex.Message.EscapeMarkup()}[/]");
+            Environment.Exit(1);
+        }
     }
 
     var services = new ServiceCollection();
@@ -61,7 +80,8 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
         UseGpu = !cpuOnly,
         ParallelJobs = jobs,
         Limit = limit,
-        ListOnly = listOnly
+        ListOnly = listOnly,
+        OutputFolder = output
     };
 
     AnsiConsole.MarkupLine($"[green]Squish - Processing directory:[/] [yellow]{directory.EscapeMarkup()}[/]");
@@ -69,6 +89,8 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
     AnsiConsole.MarkupLine($"[cyan]Parallel Jobs:[/] [yellow]{options.ParallelJobs}[/]");
     if (options.Limit.HasValue)
         AnsiConsole.MarkupLine($"[cyan]File Limit:[/] [yellow]{options.Limit}[/]");
+    if (!string.IsNullOrWhiteSpace(options.OutputFolder))
+        AnsiConsole.MarkupLine($"[cyan]Output Folder:[/] [yellow]{options.OutputFolder.EscapeMarkup()}[/]");
 
     var progress = AnsiConsole.Progress()
         .Columns(
@@ -167,6 +189,11 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
                 AnsiConsole.MarkupLine($"[cyan]Space saved:[/] [yellow]{FormatFileSize(spaceSaved)} ({percentage:F1}%)[/]");
             }
 
+            if (!string.IsNullOrWhiteSpace(options.OutputFolder))
+            {
+                AnsiConsole.MarkupLine($"[cyan]Converted files saved to:[/] [yellow]{options.OutputFolder.EscapeMarkup()}[/]");
+            }
+
             foreach (var result in resultsList.Where(r => !r.Success))
             {
                 AnsiConsole.MarkupLine($"[red]Failed: {result.FilePath.EscapeMarkup()} - {result.ErrorMessage?.EscapeMarkup()}[/]");
@@ -174,7 +201,7 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
         }
     });
 
-}, directoryArgument, listOnlyOption, cpuOnlyOption, jobsOption, limitOption);
+}, directoryArgument, listOnlyOption, cpuOnlyOption, jobsOption, limitOption, outputOption);
 
 static string FormatFileSize(long bytes)
 {

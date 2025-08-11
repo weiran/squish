@@ -8,8 +8,10 @@ A C# utility designed to reduce video file sizes through reencoding and compress
 - H.265 codec detection to avoid re-encoding already compressed files
 - GPU acceleration support (NVIDIA NVENC, Apple VideoToolbox)
 - Parallel processing for faster conversion
+- Real-time progress tracking with partial progress updates during conversion
+- Output folder support to preserve original files
 - Rich console UI with progress bars
-- Comprehensive error handling
+- Comprehensive error handling with robust temporary file cleanup
 
 ## Project Structure
 
@@ -42,13 +44,17 @@ squish [OPTIONS] <directory>
 | `-c` | `--cpu-only` | Force CPU encoding (disable GPU acceleration) |
 | `-j` | `--jobs N` | Number of parallel encoding jobs (default: auto-detect) |
 | `-n` | `--limit N` | Limit number of files to convert (default: all) |
+| `-o` | `--output <folder>` | Output folder for converted files (preserves originals) |
 | `-h` | `--help` | Show help message |
 
 ### Examples
 
 ```bash
-# Convert all non-H.265 videos
+# Convert all non-H.265 videos (replaces originals)
 squish /path/to/videos
+
+# Convert and preserve originals in output folder
+squish --output /path/to/converted /path/to/videos
 
 # List files that need conversion
 squish --list-only /path/to/videos
@@ -58,6 +64,9 @@ squish --cpu-only --jobs 4 /path/to/videos
 
 # Convert only the first 10 files (largest first)
 squish --limit 10 /path/to/videos
+
+# Convert with output folder, limiting parallel jobs
+squish --output /path/to/output --jobs 2 --limit 5 /path/to/videos
 ```
 
 ## Prerequisites
@@ -160,11 +169,12 @@ The application follows a clean architecture with dependency injection:
 
 1. **Async/Await Pattern**: All I/O operations are asynchronous
 2. **GPU Acceleration**: Automatically detects and uses hardware encoders
-3. **Progress Reporting**: Real-time progress updates with encoding speed
-4. **Error Handling**: Comprehensive exception handling with custom exceptions
-5. **Parallel Processing**: Configurable number of concurrent conversions
-6. **File Sorting**: Processes largest files first for optimal resource usage
-7. **Rich Console UI**: Uses Spectre.Console for beautiful progress displays
+3. **Real-time Progress Reporting**: Progress updates every 500ms showing partial progress from concurrent conversions
+4. **Output Folder Support**: Preserve original files by converting to separate directory
+5. **Error Handling**: Comprehensive exception handling with robust temporary file cleanup
+6. **Parallel Processing**: Configurable number of concurrent conversions with progress aggregation
+7. **File Sorting**: Processes largest files first for optimal resource usage
+8. **Rich Console UI**: Uses Spectre.Console for beautiful progress displays with real-time updates
 
 ## Dependencies
 

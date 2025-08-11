@@ -38,6 +38,25 @@ public class VideoConverter : IVideoConverter
         var fileExtension = Path.GetExtension(file.FilePath);
         var fileWithoutExtension = Path.GetFileNameWithoutExtension(file.FilePath);
         var directory = Path.GetDirectoryName(file.FilePath);
+        
+        // Determine final output path based on options
+        string finalOutputPath;
+        if (!string.IsNullOrWhiteSpace(options.OutputFolder))
+        {
+            // Ensure output directory exists
+            Directory.CreateDirectory(options.OutputFolder);
+            
+            // Preserve relative directory structure if the input is nested
+            var relativePath = Path.GetRelativePath(Path.GetDirectoryName(file.FilePath) ?? "", file.FilePath);
+            var outputFileName = Path.GetFileName(file.FilePath);
+            finalOutputPath = Path.Combine(options.OutputFolder, outputFileName);
+        }
+        else
+        {
+            // Default behavior: replace original file
+            finalOutputPath = file.FilePath;
+        }
+        
         var tempOutputPath = Path.Combine(directory!, $"{fileWithoutExtension}.tmp{fileExtension}");
 
         Process? process = null;
@@ -123,10 +142,11 @@ public class VideoConverter : IVideoConverter
             if (tempFileInfo.Length == 0)
                 throw new VideoConversionException("ffmpeg created empty output file");
 
-            File.Move(tempOutputPath, file.FilePath, true);
+            File.Move(tempOutputPath, finalOutputPath, true);
 
-            var newFileInfo = new FileInfo(file.FilePath);
+            var newFileInfo = new FileInfo(finalOutputPath);
             result.NewSize = newFileInfo.Length;
+            result.OutputPath = finalOutputPath;
             result.Success = true;
         }
         catch (Exception ex)
