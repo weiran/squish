@@ -158,13 +158,21 @@ public class VideoConverter : IVideoConverter
                 _fileSystemWrapper.MoveFile(tempOutputPath, finalOutputPath, true);
             }
 
-            // Preserve original file timestamps if requested
+            // Handle timestamp preservation or setting to current time
             if (options.PreserveTimestamps)
             {
                 var originalFileInfo = _fileSystemWrapper.GetFileInfo(file.FilePath);
                 _fileSystemWrapper.SetCreationTime(finalOutputPath, originalFileInfo.CreationTime);
                 _fileSystemWrapper.SetLastWriteTime(finalOutputPath, originalFileInfo.LastWriteTime);
                 _fileSystemWrapper.SetLastAccessTime(finalOutputPath, originalFileInfo.LastAccessTime);
+            }
+            else
+            {
+                // Set current timestamps when not preserving original ones
+                var now = DateTime.Now;
+                _fileSystemWrapper.SetCreationTime(finalOutputPath, now);
+                _fileSystemWrapper.SetLastWriteTime(finalOutputPath, now);
+                _fileSystemWrapper.SetLastAccessTime(finalOutputPath, now);
             }
 
             var newFileInfo = new FileInfo(finalOutputPath);
