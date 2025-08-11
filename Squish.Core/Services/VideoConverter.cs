@@ -223,7 +223,7 @@ public class VideoConverter : IVideoConverter
         }
 
         args.AddRange([
-            "-crf", "23",
+            "-crf", "32",
             "-preset", "medium",
             "-y",
             $"\"{outputPath}\""
