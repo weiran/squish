@@ -120,7 +120,7 @@ public class QueueManagerTests
     }
 
     [Fact]
-    public void Count_IsThreadSafe_WhenAccessedConcurrently()
+    public async Task Count_IsThreadSafe_WhenAccessedConcurrently()
     {
         var queueManager = new QueueManager();
         var tasks = new List<Task>();
@@ -136,13 +136,13 @@ public class QueueManagerTests
             }));
         }
 
-        Task.WaitAll(tasks.ToArray());
+        await Task.WhenAll(tasks);
 
         queueManager.Count.Should().Be(100);
     }
 
     [Fact]
-    public void EnqueueDequeue_IsThreadSafe_WhenAccessedConcurrently()
+    public async Task EnqueueDequeue_IsThreadSafe_WhenAccessedConcurrently()
     {
         var queueManager = new QueueManager();
         var enqueueTasks = new List<Task>();
@@ -174,8 +174,8 @@ public class QueueManagerTests
             }));
         }
 
-        Task.WaitAll(enqueueTasks.ToArray());
-        Task.WaitAll(dequeueTasks.ToArray());
+        await Task.WhenAll(enqueueTasks);
+        await Task.WhenAll(dequeueTasks);
 
         queueManager.Count.Should().Be(25); // 50 enqueued - 25 dequeued
         dequeuedItems.Count(x => x != null).Should().BeGreaterOrEqualTo(0);
