@@ -269,19 +269,22 @@ public class VideoConverter : IVideoConverter
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            return ENCODER_VIDEOTOOLBOX;
+            return IsEncoderAvailable(ENCODER_VIDEOTOOLBOX) ? ENCODER_VIDEOTOOLBOX : null;
         }
 
-        return HasNvidiaGpu() ? ENCODER_NVENC : null;
+        // On Windows/Linux, check for NVENC support
+        return IsEncoderAvailable(ENCODER_NVENC) ? ENCODER_NVENC : null;
     }
 
-    private static bool HasNvidiaGpu()
+    private static bool IsEncoderAvailable(string encoderName)
     {
         try
         {
+            // Check if FFmpeg supports the specific encoder by listing available encoders
             var processStartInfo = new ProcessStartInfo
             {
-                FileName = "nvidia-smi",
+                FileName = "ffmpeg",
+                Arguments = "-hide_banner -encoders",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -289,7 +292,13 @@ public class VideoConverter : IVideoConverter
             };
 
             using var process = Process.Start(processStartInfo);
-            return process?.WaitForExit(5000) == true && process.ExitCode == 0;
+            if (process == null) return false;
+            
+            var output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            
+            // Check if the specified encoder is available
+            return process.ExitCode == 0 && output.Contains(encoderName);
         }
         catch
         {
