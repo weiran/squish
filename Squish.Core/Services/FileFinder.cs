@@ -26,29 +26,37 @@ public class FileFinder : IFileFinder
             var videoFiles = new List<VideoFile>();
             var extensionSet = new HashSet<string>(_videoExtensions, StringComparer.OrdinalIgnoreCase);
             
-            // Single enumeration of all files, filter by extension
-            var allFiles = _fileSystemWrapper.EnumerateFiles(directoryPath, "*.*", SearchOption.AllDirectories);
-            
-            foreach (var file in allFiles)
+            try
             {
-                try
+                // Single enumeration of all files, filter by extension
+                var allFiles = _fileSystemWrapper.EnumerateFiles(directoryPath, "*.*", SearchOption.AllDirectories);
+                
+                foreach (var file in allFiles)
                 {
-                    var extension = Path.GetExtension(file);
-                    if (!string.IsNullOrEmpty(extension) && extensionSet.Contains(extension))
+                    try
                     {
-                        var fileSize = _fileSystemWrapper.GetFileSize(file);
-                        videoFiles.Add(new VideoFile
+                        var extension = Path.GetExtension(file);
+                        if (!string.IsNullOrEmpty(extension) && extensionSet.Contains(extension))
                         {
-                            FilePath = file,
-                            FileSize = fileSize
-                        });
+                            var fileSize = _fileSystemWrapper.GetFileSize(file);
+                            videoFiles.Add(new VideoFile
+                            {
+                                FilePath = file,
+                                FileSize = fileSize
+                            });
+                        }
+                    }
+                    catch (Exception ex) when (ex is FileNotFoundException || ex is UnauthorizedAccessException || ex is DirectoryNotFoundException)
+                    {
+                        // Skip files that can't be accessed
+                        continue;
                     }
                 }
-                catch (Exception ex) when (ex is FileNotFoundException || ex is UnauthorizedAccessException)
-                {
-                    // Skip files that can't be accessed
-                    continue;
-                }
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // If we can't access the directory at all, return empty list
+                // This handles cases like system directories with restricted access
             }
 
             return videoFiles.OrderByDescending(f => f.FileSize);

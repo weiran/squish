@@ -64,7 +64,7 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
         ListOnly = listOnly
     };
 
-    AnsiConsole.MarkupLine($"[green]Squish - Processing directory:[/] [yellow]{directory}[/]");
+    AnsiConsole.MarkupLine($"[green]Squish - Processing directory:[/] [yellow]{directory.EscapeMarkup()}[/]");
     AnsiConsole.MarkupLine($"[cyan]GPU Acceleration:[/] {(options.UseGpu ? "[green]Enabled[/]" : "[red]Disabled[/]")}");
     AnsiConsole.MarkupLine($"[cyan]Parallel Jobs:[/] [yellow]{options.ParallelJobs}[/]");
     if (options.Limit.HasValue)
@@ -169,7 +169,7 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
 
             foreach (var result in resultsList.Where(r => !r.Success))
             {
-                AnsiConsole.MarkupLine($"[red]Failed: {result.FilePath} - {result.ErrorMessage}[/]");
+                AnsiConsole.MarkupLine($"[red]Failed: {result.FilePath.EscapeMarkup()} - {result.ErrorMessage?.EscapeMarkup()}[/]");
             }
         }
     });
