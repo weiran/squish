@@ -21,9 +21,9 @@ public class VideoConverter : IVideoConverter
     private const string ENCODER_SOFTWARE_X265 = "libx265";           // Software x265 encoder
     
     // CRF (Constant Rate Factor) constants for different encoders
-    private const string CRF_VIDEOTOOLBOX = "50";  // Apple VideoToolbox HEVC encoder
-    private const string CRF_NVENC = "40";         // NVIDIA NVENC HEVC encoder
-    private const string CRF_SOFTWARE_X265 = "32"; // Software x265 encoder
+    private const string CRF_VIDEOTOOLBOX = "40";  // Apple VideoToolbox HEVC encoder
+    private const string CRF_NVENC = "32";         // NVIDIA NVENC HEVC encoder
+    private const string CRF_SOFTWARE_X265 = "28"; // Software x265 encoder
 
     public VideoConverter(IProcessWrapper processWrapper, ILogger logger)
     {
