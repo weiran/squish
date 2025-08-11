@@ -168,7 +168,7 @@ public class JobRunner
                 var file = _queueManager.Dequeue();
                 if (file == null) break;
 
-                var task = ProcessFileAsync(file, options, fileProgressTrackers, conversionSemaphore, cancellationToken);
+                var task = ProcessFileAsync(file, directoryPath, options, fileProgressTrackers, conversionSemaphore, cancellationToken);
                 conversionTasks.Add(task);
             }
 
@@ -233,6 +233,7 @@ public class JobRunner
 
     private async Task<ConversionResult> ProcessFileAsync(
         VideoFile file,
+        string basePath,
         ConversionOptions options,
         ConcurrentDictionary<string, FileProgressTracker> progressTrackers,
         SemaphoreSlim semaphore,
@@ -257,7 +258,7 @@ public class JobRunner
                 tracker.Speed = p.Speed;
             });
             
-            return await _videoConverter.ConvertAsync(file, options, fileProgressReporter);
+            return await _videoConverter.ConvertAsync(file, basePath, options, fileProgressReporter);
         }
         finally
         {

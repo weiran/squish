@@ -30,7 +30,7 @@ public class VideoConverter : IVideoConverter
         _processWrapper = processWrapper ?? throw new ArgumentNullException(nameof(processWrapper));
     }
 
-    public async Task<ConversionResult> ConvertAsync(VideoFile file, ConversionOptions options, IProgress<ConversionProgress> progress)
+    public async Task<ConversionResult> ConvertAsync(VideoFile file, string basePath, ConversionOptions options, IProgress<ConversionProgress> progress)
     {
         ArgumentNullException.ThrowIfNull(file);
         ArgumentNullException.ThrowIfNull(options);
@@ -48,32 +48,36 @@ public class VideoConverter : IVideoConverter
         var fileExtension = Path.GetExtension(file.FilePath);
         var fileWithoutExtension = Path.GetFileNameWithoutExtension(file.FilePath);
         var directory = Path.GetDirectoryName(file.FilePath);
-        
-        // Determine final output path based on options
+
         string finalOutputPath;
+        string conversionOutputPath;
+        string? tempOutputPath = null; // Can be null if outputting directly
+
         if (!string.IsNullOrWhiteSpace(options.OutputFolder))
         {
-            // Ensure output directory exists
-            Directory.CreateDirectory(options.OutputFolder);
+            var relativePath = Path.GetRelativePath(basePath, file.FilePath);
+            finalOutputPath = Path.Combine(options.OutputFolder, relativePath);
             
-            // Preserve relative directory structure if the input is nested
-            var relativePath = Path.GetRelativePath(Path.GetDirectoryName(file.FilePath) ?? "", file.FilePath);
-            var outputFileName = Path.GetFileName(file.FilePath);
-            finalOutputPath = Path.Combine(options.OutputFolder, outputFileName);
+            var finalDirectory = Path.GetDirectoryName(finalOutputPath);
+            if (!string.IsNullOrEmpty(finalDirectory)){
+                Directory.CreateDirectory(finalDirectory);
+            }
+            
+            conversionOutputPath = finalOutputPath; // Output directly to the final destination
         }
         else
         {
-            // Default behavior: replace original file
+            // Use a temporary file in the original directory
             finalOutputPath = file.FilePath;
+            tempOutputPath = Path.Combine(directory!, $"{fileWithoutExtension}.tmp{fileExtension}");
+            conversionOutputPath = tempOutputPath;
         }
-        
-        var tempOutputPath = Path.Combine(directory!, $"{fileWithoutExtension}.tmp{fileExtension}");
 
         Process? process = null;
         try
         {
-            var ffmpegArgs = BuildFfmpegArguments(file.FilePath, tempOutputPath, options);
-            
+            var ffmpegArgs = BuildFfmpegArguments(file.FilePath, conversionOutputPath, options);
+
             var processStartInfo = new ProcessStartInfo
             {
                 FileName = "ffmpeg",
@@ -91,14 +95,13 @@ public class VideoConverter : IVideoConverter
             var duration = TimeSpan.Zero;
             var errorOutput = new List<string>();
             var hasEncounteredError = false;
-            
+
             process.ErrorDataReceived += (sender, e) =>
             {
                 if (string.IsNullOrEmpty(e.Data)) return;
-                
+
                 errorOutput.Add(e.Data);
-                
-                // Check for common ffmpeg error patterns early
+
                 if (e.Data.Contains("Invalid data found when processing input") ||
                     e.Data.Contains("No such file or directory") ||
                     e.Data.Contains("Permission denied") ||
@@ -107,7 +110,7 @@ public class VideoConverter : IVideoConverter
                 {
                     hasEncounteredError = true;
                 }
-                
+
                 if (duration == TimeSpan.Zero)
                 {
                     var durationMatch = DurationRegex.Match(e.Data);
@@ -122,7 +125,7 @@ public class VideoConverter : IVideoConverter
                 {
                     var currentTime = ParseTimeSpan(progressMatch.Groups[1].Value, progressMatch.Groups[2].Value, progressMatch.Groups[3].Value);
                     var percentage = (currentTime.TotalSeconds / duration.TotalSeconds) * 100;
-                    
+
                     var speedMatch = SpeedRegex.Match(e.Data);
                     var speed = speedMatch.Success ? $"{speedMatch.Groups[1].Value}x" : "0x";
 
@@ -144,15 +147,19 @@ public class VideoConverter : IVideoConverter
                 throw new VideoConversionException($"ffmpeg failed with exit code {process.ExitCode}: {errorMessage}");
             }
 
-            // Verify temporary file was created and has content
-            if (!File.Exists(tempOutputPath))
+            // Verify output file was created and has content
+            if (!File.Exists(conversionOutputPath))
                 throw new VideoConversionException("ffmpeg did not create output file");
 
-            var tempFileInfo = new FileInfo(tempOutputPath);
-            if (tempFileInfo.Length == 0)
+            var outputFileInfo = new FileInfo(conversionOutputPath);
+            if (outputFileInfo.Length == 0)
                 throw new VideoConversionException("ffmpeg created empty output file");
 
-            File.Move(tempOutputPath, finalOutputPath, true);
+            // If a temporary file was used, move it to the final destination
+            if (tempOutputPath != null)
+            {
+                File.Move(tempOutputPath, finalOutputPath, true);
+            }
 
             var newFileInfo = new FileInfo(finalOutputPath);
             result.NewSize = newFileInfo.Length;
@@ -161,17 +168,16 @@ public class VideoConverter : IVideoConverter
         }
         catch (Exception ex)
         {
-            // Clean up temporary file if it exists
-            if (File.Exists(tempOutputPath))
+            // Clean up the output file if an error occurred
+            if (File.Exists(conversionOutputPath))
             {
                 try
                 {
-                    File.Delete(tempOutputPath);
+                    File.Delete(conversionOutputPath);
                 }
                 catch (Exception cleanupEx)
                 {
-                    // Log cleanup failure but don't override the original exception
-                    Console.WriteLine($"Warning: Failed to delete temporary file {tempOutputPath}: {cleanupEx.Message}");
+                    Console.WriteLine($"Warning: Failed to delete output file {conversionOutputPath}: {cleanupEx.Message}");
                 }
             }
 
@@ -180,7 +186,7 @@ public class VideoConverter : IVideoConverter
 
             if (ex is not VideoConversionException)
                 throw new VideoConversionException($"Conversion failed for {file.FilePath}", ex);
-            
+
             throw;
         }
         finally
