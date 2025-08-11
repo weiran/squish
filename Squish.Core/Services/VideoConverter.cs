@@ -111,13 +111,10 @@ public class VideoConverter : IVideoConverter
                     hasEncounteredError = true;
                 }
 
-                if (duration == TimeSpan.Zero)
+                var durationMatch = DurationRegex.Match(e.Data);
+                if (durationMatch.Success)
                 {
-                    var durationMatch = DurationRegex.Match(e.Data);
-                    if (durationMatch.Success)
-                    {
-                        duration = ParseTimeSpan(durationMatch.Groups[1].Value, durationMatch.Groups[2].Value, durationMatch.Groups[3].Value);
-                    }
+                    duration = ParseTimeSpan(durationMatch.Groups[1].Value, durationMatch.Groups[2].Value, durationMatch.Groups[3].Value);
                 }
 
                 var progressMatch = ProgressRegex.Match(e.Data);
@@ -165,6 +162,13 @@ public class VideoConverter : IVideoConverter
             result.NewSize = newFileInfo.Length;
             result.OutputPath = finalOutputPath;
             result.Success = true;
+
+            progress?.Report(new ConversionProgress
+            {
+                Percentage = 100,
+                Speed = "0x",
+                CurrentFile = Path.GetFileName(file.FilePath)
+            });
         }
         catch (Exception ex)
         {
@@ -202,12 +206,6 @@ public class VideoConverter : IVideoConverter
             }
 
             result.Duration = DateTime.UtcNow - startTime;
-            progress?.Report(new ConversionProgress
-            {
-                Percentage = result.Success ? 100 : 0,
-                Speed = "0x",
-                CurrentFile = Path.GetFileName(file.FilePath)
-            });
         }
 
         return result;
