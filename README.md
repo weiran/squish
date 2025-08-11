@@ -83,14 +83,58 @@ These executables don't require .NET to be installed on the target system.
 Requirements:
 - .NET 9.0 SDK
 
+#### Quick Local Development Build
+
 ```bash
-# Build for development
+# Fast build for current platform only (for local development)
+./build.sh              # On macOS/Linux
+# OR  
+./build.ps1             # On Windows (PowerShell)
+```
+
+#### Cross-Platform Distribution Builds
+
+```bash
+# Build for all platforms (default)
+./build-all.sh          # On macOS/Linux
+./build-all.ps1         # On Windows (PowerShell)
+
+# Build for specific platforms
+./build-all.sh win                    # Windows only
+./build-all.sh macos                  # macOS (both x64 and ARM64) 
+./build-all.sh linux                  # Linux only
+./build-all.sh win linux              # Multiple platforms
+./build-all.sh win-x64                # Specific architecture
+./build-all.sh osx-arm64              # macOS Apple Silicon only
+
+# PowerShell examples
+./build-all.ps1 win,macos            # Multiple platforms (comma-separated)
+./build-all.ps1 linux-x64            # Specific architecture
+```
+
+#### Available Platform Targets
+
+| Platform | Target ID | Description |
+|----------|-----------|-------------|
+| `win` | `win-x64` | Windows x64 |
+| `macos` | `osx-x64`, `osx-arm64` | macOS Intel and Apple Silicon |
+| `linux` | `linux-x64` | Linux x64 |
+| `win-x64` | `win-x64` | Windows x64 (specific) |
+| `osx-x64` | `osx-x64` | macOS Intel (specific) |
+| `osx-arm64` | `osx-arm64` | macOS Apple Silicon (specific) |
+| `linux-x64` | `linux-x64` | Linux x64 (specific) |
+
+#### Manual Build Commands
+
+```bash
+# Build for development (current platform)
 dotnet build
 
-# Create self-contained executables for all platforms
-./build-all.sh          # On macOS/Linux
-# OR
-./build-all.ps1         # On Windows (PowerShell)
+# Build for release (current platform)  
+dotnet build -c Release
+
+# Manual cross-platform publish
+dotnet publish Squish.Console/Squish.Console.csproj -c Release --self-contained true -r win-x64 -o publish/win-x64
 ```
 
 ### Option 3: Run with .NET
