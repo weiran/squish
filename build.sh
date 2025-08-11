@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Unified build script for Squish - creates self-contained executables
-# This script builds the Squish console application with embedded .NET runtime
+# This script builds both the Squish console and UI applications with embedded .NET runtime
 # so users don't need to install .NET separately.
 #
 # Usage:
@@ -112,21 +112,26 @@ fi
 echo ""
 
 # Handle development vs publish builds
-PROJECT="Squish.Console/Squish.Console.csproj"
+CONSOLE_PROJECT="Squish.Console/Squish.Console.csproj"
+UI_PROJECT="Squish.UI/Squish.UI.csproj"
 
 if [ "$DEV_BUILD" = true ]; then
     # Fast development build - just compile, no publish
-    if [ -d "Squish.Console/bin" ] || [ -d "Squish.Console/obj" ]; then
+    if [ -d "Squish.Console/bin" ] || [ -d "Squish.Console/obj" ] || [ -d "Squish.UI/bin" ] || [ -d "Squish.UI/obj" ]; then
         echo "🧹 Cleaning previous development builds..."
-        rm -rf Squish.Console/bin Squish.Console/obj Squish.Core/bin Squish.Core/obj
+        rm -rf Squish.Console/bin Squish.Console/obj Squish.UI/bin Squish.UI/obj Squish.Core/bin Squish.Core/obj
     fi
     
     echo "⚡ Building optimized release (development)..."
-    dotnet build $PROJECT -c Release
+    echo "Building console application..."
+    dotnet build $CONSOLE_PROJECT -c Release
+    echo "Building UI application..."
+    dotnet build $UI_PROJECT -c Release
     
     echo ""
     echo "✅ Development build complete!"
-    echo "📂 Executable location: Squish.Console/bin/Release/net9.0/squish"
+    echo "📂 Console executable location: Squish.Console/bin/Release/net9.0/squish"
+    echo "📂 UI executable location: Squish.UI/bin/Release/net9.0/Squish.UI"
     echo ""
     echo "🚀 Ready to run locally!"
     exit 0
@@ -172,7 +177,38 @@ get_platform_info() {
 for platform in "${PLATFORMS[@]}"; do
     read -r icon description <<< "$(get_platform_info "$platform")"
     echo "$icon Building for $description..."
-    dotnet publish $PROJECT $COMMON_ARGS -r "$platform" -o "publish/$platform"
+    
+    # Build console application
+    echo "  Building console application..."
+    dotnet publish $CONSOLE_PROJECT $COMMON_ARGS -r "$platform" -o "publish/$platform/console"
+    
+    # Build UI application with custom name
+    echo "  Building UI application (Squish)..."
+    dotnet publish $UI_PROJECT $COMMON_ARGS -r "$platform" -o "publish/$platform/ui"
+    
+    # Move executables to platform root and rename appropriately
+    case $platform in
+        win-x64|win-arm64)
+            if [ -f "publish/$platform/console/squish.exe" ]; then
+                mv "publish/$platform/console/squish.exe" "publish/$platform/squish-console.exe"
+            fi
+            if [ -f "publish/$platform/ui/Squish.UI.exe" ]; then
+                mv "publish/$platform/ui/Squish.UI.exe" "publish/$platform/Squish.exe"
+            fi
+            ;;
+        *)
+            if [ -f "publish/$platform/console/squish" ]; then
+                mv "publish/$platform/console/squish" "publish/$platform/squish-console"
+            fi
+            if [ -f "publish/$platform/ui/Squish.UI" ]; then
+                mv "publish/$platform/ui/Squish.UI" "publish/$platform/Squish"
+            fi
+            ;;
+    esac
+    
+    # Clean up subdirectories
+    rm -rf "publish/$platform/console" "publish/$platform/ui"
+    
     echo "✅ $description build complete"
     echo ""
 done
@@ -182,8 +218,11 @@ echo "🔧 Setting executable permissions..."
 for platform in "${PLATFORMS[@]}"; do
     case $platform in
         osx-x64|osx-arm64|linux-x64|linux-arm64)
-            if [ -f "publish/$platform/squish" ]; then
-                chmod +x "publish/$platform/squish"
+            if [ -f "publish/$platform/squish-console" ]; then
+                chmod +x "publish/$platform/squish-console"
+            fi
+            if [ -f "publish/$platform/Squish" ]; then
+                chmod +x "publish/$platform/Squish"
             fi
             ;;
     esac
@@ -198,13 +237,19 @@ for platform in "${PLATFORMS[@]}"; do
     read -r icon description <<< "$(get_platform_info "$platform")"
     case $platform in
         win-x64|win-arm64)
-            if [ -f "publish/$platform/squish.exe" ]; then
-                echo "   • $description: publish/$platform/squish.exe"
+            if [ -f "publish/$platform/squish-console.exe" ]; then
+                echo "   • $description Console: publish/$platform/squish-console.exe"
+            fi
+            if [ -f "publish/$platform/Squish.exe" ]; then
+                echo "   • $description UI: publish/$platform/Squish.exe"
             fi
             ;;
         *)
-            if [ -f "publish/$platform/squish" ]; then
-                echo "   • $description: publish/$platform/squish"
+            if [ -f "publish/$platform/squish-console" ]; then
+                echo "   • $description Console: publish/$platform/squish-console"
+            fi
+            if [ -f "publish/$platform/Squish" ]; then
+                echo "   • $description UI: publish/$platform/Squish"
             fi
             ;;
     esac
@@ -220,15 +265,23 @@ for platform in "${PLATFORMS[@]}"; do
     read -r icon description <<< "$(get_platform_info "$platform")"
     case $platform in
         win-x64|win-arm64)
-            if [ -f "publish/$platform/squish.exe" ]; then
-                echo -n "   $description: "
-                ls -lh "publish/$platform/squish.exe" | awk '{print $5}'
+            if [ -f "publish/$platform/squish-console.exe" ]; then
+                echo -n "   $description Console: "
+                ls -lh "publish/$platform/squish-console.exe" | awk '{print $5}'
+            fi
+            if [ -f "publish/$platform/Squish.exe" ]; then
+                echo -n "   $description UI: "
+                ls -lh "publish/$platform/Squish.exe" | awk '{print $5}'
             fi
             ;;
         *)
-            if [ -f "publish/$platform/squish" ]; then
-                echo -n "   $description: "
-                ls -lh "publish/$platform/squish" | awk '{print $5}'
+            if [ -f "publish/$platform/squish-console" ]; then
+                echo -n "   $description Console: "
+                ls -lh "publish/$platform/squish-console" | awk '{print $5}'
+            fi
+            if [ -f "publish/$platform/Squish" ]; then
+                echo -n "   $description UI: "
+                ls -lh "publish/$platform/Squish" | awk '{print $5}'
             fi
             ;;
     esac
