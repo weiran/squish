@@ -35,7 +35,10 @@ public class VideoConverter : IVideoConverter
         };
 
         var startTime = DateTime.UtcNow;
-        var tempOutputPath = file.FilePath + ".tmp";
+        var fileExtension = Path.GetExtension(file.FilePath);
+        var fileWithoutExtension = Path.GetFileNameWithoutExtension(file.FilePath);
+        var directory = Path.GetDirectoryName(file.FilePath);
+        var tempOutputPath = Path.Combine(directory!, $"{fileWithoutExtension}.tmp{fileExtension}");
 
         try
         {
