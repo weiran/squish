@@ -290,11 +290,13 @@ public class VideoConverter : IVideoConverter
 
     private static TimeSpan ParseTimeSpan(string hours, string minutes, string seconds)
     {
-        return new TimeSpan(
-            int.Parse(hours),
-            int.Parse(minutes),
-            (int)double.Parse(seconds, CultureInfo.InvariantCulture),
-            (int)((double.Parse(seconds, CultureInfo.InvariantCulture) % 1) * 1000)
-        );
+        var h = int.Parse(hours);
+        var m = int.Parse(minutes);
+        var secDouble = double.Parse(seconds, CultureInfo.InvariantCulture);
+        var s = (int)secDouble;
+        var ms = (int)((secDouble % 1) * 1000);
+        
+        // Use the correct constructor: TimeSpan(days, hours, minutes, seconds, milliseconds)
+        return new TimeSpan(0, h, m, s, ms);
     }
 }
