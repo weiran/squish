@@ -80,12 +80,16 @@ public class VideoConverter : IVideoConverter
             var processStartInfo = new ProcessStartInfo
             {
                 FileName = "ffmpeg",
-                Arguments = ffmpegArgs,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
+            
+            foreach (var arg in ffmpegArgs)
+            {
+                processStartInfo.ArgumentList.Add(arg);
+            }
 
             process = Process.Start(processStartInfo);
             if (process == null)
@@ -203,11 +207,11 @@ public class VideoConverter : IVideoConverter
         return result;
     }
 
-    private static string BuildFfmpegArguments(string inputPath, string outputPath, ConversionOptions options)
+    private static List<string> BuildFfmpegArguments(string inputPath, string outputPath, ConversionOptions options)
     {
         var args = new List<string>
         {
-            "-i", $"{inputPath}",
+            "-i", inputPath,
             "-c:a", "copy"
         };
 
@@ -245,9 +249,9 @@ public class VideoConverter : IVideoConverter
             args.Add("medium");
         }
         
-        args.AddRange(["-y", $"{outputPath}"]);
+        args.AddRange(["-y", outputPath]);
 
-        return string.Join(" ", args);
+        return args;
     }
 
     private static string? GetGpuEncoder()
