@@ -1,0 +1,254 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Squish.UI.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="750"
+        x:Class="Squish.UI.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Squish - Video Compression Tool"
+        Width="900"
+        Height="750"
+        MinWidth="600"
+        MinHeight="500"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Styles>
+        <Style Selector="Border.section">
+            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltHighBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="20" />
+            <Setter Property="Margin" Value="0,0,0,16" />
+        </Style>
+        
+        <Style Selector="TextBlock.section-header">
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+        </Style>
+        
+        <Style Selector="Button.browse">
+            <Setter Property="Width" Value="80" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+        </Style>
+        
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource SystemAccentColor}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Height" Value="44" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        
+        <Style Selector="ProgressBar.file-progress">
+            <Setter Property="Height" Value="6" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Margin" Value="0,4,0,0" />
+        </Style>
+    </Window.Styles>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="24" Spacing="0">
+            
+            <!-- Header -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,32">
+                <TextBlock Text="🎬" FontSize="48" VerticalAlignment="Center" Margin="0,0,12,0" />
+                <StackPanel>
+                    <TextBlock Text="Squish" FontSize="36" FontWeight="Bold" />
+                    <TextBlock Text="H.265/HEVC Video Compression Tool" 
+                               FontSize="14" 
+                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Folder Selection Section -->
+            <Border Classes="section">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="📁 Folder Selection" Classes="section-header" />
+                    
+                    <!-- Input Folder -->
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Input Folder (required):" FontWeight="Medium" />
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBox Grid.Column="0" 
+                                     Text="{Binding InputFolder}" 
+                                     Watermark="Select folder containing videos to compress..."
+                                     IsReadOnly="True" />
+                            <Button Grid.Column="1" 
+                                    Content="Browse" 
+                                    Classes="browse"
+                                    Command="{Binding SelectInputFolderCommand}"
+                                    Margin="8,0,0,0" />
+                        </Grid>
+                    </StackPanel>
+                    
+                    <!-- Output Folder -->
+                    <StackPanel Spacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="Output Folder (optional):" FontWeight="Medium" />
+                            <TextBlock Text="- preserves original files" 
+                                       FontSize="12" 
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" 
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                        <Grid ColumnDefinitions="*,Auto,Auto">
+                            <TextBox Grid.Column="0" 
+                                     Text="{Binding OutputFolder}" 
+                                     Watermark="Leave empty to replace original files..."
+                                     IsReadOnly="True" />
+                            <Button Grid.Column="1" 
+                                    Content="Browse" 
+                                    Classes="browse"
+                                    Command="{Binding SelectOutputFolderCommand}"
+                                    Margin="8,0,0,0" />
+                            <Button Grid.Column="2" 
+                                    Content="Clear" 
+                                    Width="60"
+                                    Command="{Binding ClearOutputFolderCommand}"
+                                    Margin="8,0,0,0" />
+                        </Grid>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Settings Section -->
+            <Border Classes="section">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="⚙️ Settings" Classes="section-header" />
+                    
+                    <!-- GPU Acceleration -->
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Use GPU Acceleration" FontWeight="Medium" />
+                            <TextBlock Text="Enables NVIDIA NVENC or Apple VideoToolbox hardware encoding" 
+                                       FontSize="12" 
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1" 
+                                      IsChecked="{Binding UseGpu}" 
+                                      VerticalAlignment="Center" />
+                    </Grid>
+                    
+                    <!-- Parallel Jobs -->
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="Parallel Jobs" FontWeight="Medium" />
+                            <TextBlock Grid.Column="1" Text="{Binding ParallelJobs}" FontWeight="Bold" />
+                        </Grid>
+                        <Slider Value="{Binding ParallelJobs}"
+                                Minimum="1"
+                                Maximum="16"
+                                TickFrequency="1"
+                                IsSnapToTickEnabled="True" />
+                        <TextBlock Text="Higher values = faster processing but uses more CPU/GPU resources" 
+                                   FontSize="12" 
+                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                    </StackPanel>
+                    
+                    <!-- Additional Options -->
+                    <Grid ColumnDefinitions="*,*">
+                        <StackPanel Grid.Column="0" Spacing="12">
+                            <!-- File Limit -->
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="File Limit (optional):" FontWeight="Medium" />
+                                <NumericUpDown Value="{Binding FileLimit}" 
+                                               Minimum="1" 
+                                               Maximum="10000"
+                                               Watermark="No limit" 
+                                               Width="120" 
+                                               HorizontalAlignment="Left" />
+                            </StackPanel>
+                            
+                            <!-- List Only -->
+                            <CheckBox IsChecked="{Binding ListOnly}" 
+                                      Content="List files only (don't convert)" />
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Column="1" Spacing="12">
+                            <!-- Preserve Timestamps -->
+                            <CheckBox IsChecked="{Binding PreserveTimestamps}" 
+                                      Content="Preserve original timestamps" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Action Button -->
+            <Button Content="{Binding IsProcessing, Converter={StaticResource BoolToProcessingTextConverter}}"
+                    Classes="primary"
+                    Command="{Binding StartProcessingCommand}"
+                    IsEnabled="{Binding !IsProcessing}"
+                    HorizontalAlignment="Stretch"
+                    Margin="0,0,0,16" />
+
+            <!-- Progress Section -->
+            <Border Classes="section" IsVisible="{Binding IsProcessing}">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="📊 Progress" Classes="section-header" />
+                    
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{Binding StatusText}" FontSize="16" FontWeight="Medium" />
+                        <ProgressBar Value="{Binding OverallProgress}" 
+                                     Maximum="100" 
+                                     Height="12" 
+                                     CornerRadius="6" />
+                        <TextBlock Text="{Binding OverallProgress, StringFormat='Overall Progress: {0:F1}%'}" 
+                                   HorizontalAlignment="Center" 
+                                   FontWeight="Bold" />
+                    </StackPanel>
+                    
+                    <!-- Individual File Progress -->
+                    <ItemsControl ItemsSource="{Binding FileProgress}" 
+                                  IsVisible="{Binding FileProgress.Count, Converter={StaticResource IntToBoolConverter}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource SystemControlBackgroundBaseLowBrush}" 
+                                        BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                                        BorderThickness="1" 
+                                        CornerRadius="4" 
+                                        Padding="12,8" 
+                                        Margin="0,4">
+                                    <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                                   Text="{Binding FileName}"
+                                                   FontSize="13"
+                                                   FontWeight="Medium"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Row="0" Grid.Column="1"
+                                                   Text="{Binding Speed}"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                                        <ProgressBar Grid.Row="1" Grid.ColumnSpan="2"
+                                                     Value="{Binding Progress}" 
+                                                     Maximum="100"
+                                                     Classes="file-progress" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- Results Section -->
+            <Border Classes="section" IsVisible="{Binding ShowResults}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="📋 Results" Classes="section-header" />
+                    <ScrollViewer Height="200" VerticalScrollBarVisibility="Auto">
+                        <SelectableTextBlock Text="{Binding ResultsText}"
+                                             FontFamily="Consolas,Monaco,'Courier New',monospace"
+                                             FontSize="13"
+                                             Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                                             Padding="12"
+                                             />
+                    </ScrollViewer>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</Window>

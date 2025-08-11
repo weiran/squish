@@ -1,0 +1,75 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:converters="using:Squish.UI.Converters">
+    <Design.PreviewWith>
+        <Border Padding="20">
+            <!-- Preview content here -->
+        </Border>
+    </Design.PreviewWith>
+
+    <!-- Add Converters as Resources -->
+    <Styles.Resources>
+        <converters:BoolToProcessingTextConverter x:Key="BoolToProcessingTextConverter" />
+        <converters:IntToBoolConverter x:Key="IntToBoolConverter" />
+    </Styles.Resources>
+
+    <!-- Custom Button Styles -->
+    <Style Selector="Button.accent">
+        <Setter Property="Background" Value="{DynamicResource SystemAccentColor}" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="FontWeight" Value="Medium" />
+    </Style>
+
+    <Style Selector="Button.accent:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource SystemAccentColorLight1}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorLight1}" />
+    </Style>
+
+    <Style Selector="Button.accent:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource SystemAccentColorDark1}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorDark1}" />
+    </Style>
+
+    <!-- Enhanced Progress Bar -->
+    <Style Selector="ProgressBar.modern">
+        <Setter Property="Height" Value="8" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="Background" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource SystemAccentColor}" />
+    </Style>
+
+    <!-- Section Headers -->
+    <Style Selector="TextBlock.section-title">
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Margin" Value="0,0,0,16" />
+    </Style>
+
+    <!-- Enhanced TextBox styling -->
+    <Style Selector="TextBox.modern">
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="FontSize" Value="14" />
+    </Style>
+
+    <!-- Card-like borders -->
+    <Style Selector="Border.card">
+        <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="20" />
+        <Setter Property="Margin" Value="0,8" />
+    </Style>
+
+    <!-- Platform-specific styles -->
+    <Style Selector=":is(Window)">
+        <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}" />
+    </Style>
+
+    <!-- Platform-specific styling will be handled through conditional compilation or runtime detection -->
+
+</Styles>

@@ -1,6 +1,6 @@
 # Squish - Video Compression Utility
 
-A C# utility designed to reduce video file sizes through reencoding and compression using H.265/HEVC encoding with ffmpeg.
+A C# utility designed to reduce video file sizes through reencoding and compression using H.265/HEVC encoding with ffmpeg. Available as both a command-line tool and a modern cross-platform desktop application.
 
 ## Features
 
@@ -12,6 +12,7 @@ A C# utility designed to reduce video file sizes through reencoding and compress
 - Output folder support to preserve original files
 - Timestamp preservation (preserves original file creation/modification dates by default)
 - Rich console UI with progress bars
+- **New**: Modern cross-platform desktop application with native look and feel
 - Comprehensive error handling with robust temporary file cleanup
 
 ## Project Structure
@@ -27,11 +28,34 @@ Squish/
 ├── Squish.Console/        # Console application
 │   ├── Program.cs         # Entry point with CLI parsing
 │   └── appsettings.json   # Configuration
+├── Squish.UI/             # Cross-platform desktop application (NEW)
+│   ├── Views/             # UI views and layouts
+│   ├── ViewModels/        # MVVM view models
+│   ├── Services/          # UI-specific services
+│   ├── Styles/            # Custom UI styling
+│   └── README.md          # UI-specific documentation
 └── docs/
     └── design.md          # Technical design document
 ```
 
 ## Usage
+
+### Desktop Application (Recommended)
+
+Launch the modern cross-platform desktop application:
+
+```bash
+dotnet run --project Squish.UI
+```
+
+The desktop application provides:
+- 🖥️ **Native look and feel** on Windows and macOS
+- 📁 **Easy folder selection** with built-in file browser
+- ⚙️ **Visual settings panel** for all compression options
+- 📊 **Real-time progress tracking** with individual file progress bars
+- 📋 **Detailed results display** with space savings and error reporting
+
+### Command Line Interface
 
 ```bash
 squish [OPTIONS] <directory>
