@@ -72,9 +72,11 @@ squish --limit 10 /path/to/videos
 Self-contained executables with embedded .NET runtime are available in the `publish/` directory after running the build script:
 
 - **Windows x64**: `publish/win-x64/squish.exe`
-- **macOS x64**: `publish/osx-x64/squish`  
-- **macOS ARM64**: `publish/osx-arm64/squish`
+- **Windows ARM64**: `publish/win-arm64/squish.exe`
+- **macOS x64 (Intel)**: `publish/osx-x64/squish`  
+- **macOS ARM64 (Apple Silicon)**: `publish/osx-arm64/squish`
 - **Linux x64**: `publish/linux-x64/squish`
+- **Linux ARM64**: `publish/linux-arm64/squish`
 
 These executables don't require .NET to be installed on the target system.
 
@@ -83,46 +85,47 @@ These executables don't require .NET to be installed on the target system.
 Requirements:
 - .NET 9.0 SDK
 
-#### Quick Local Development Build
+#### Unified Build System
+
+The project uses a single build script that automatically detects your platform and builds accordingly:
 
 ```bash
-# Fast build for current platform only (for local development)
+# Default: Build for current platform only (fast)
 ./build.sh              # On macOS/Linux
-# OR  
-./build.ps1             # On Windows (PowerShell)
-```
+.\build.ps1             # On Windows (PowerShell)
 
-#### Cross-Platform Distribution Builds
+# Development builds (fastest - no self-contained publish)
+./build.sh --dev        # On macOS/Linux
+.\build.ps1 -Dev        # On Windows (PowerShell)
 
-```bash
-# Build for all platforms (default)
-./build-all.sh          # On macOS/Linux
-./build-all.ps1         # On Windows (PowerShell)
+# Build for all supported platforms
+./build.sh --all        # On macOS/Linux
+.\build.ps1 -All        # On Windows (PowerShell)
 
-# Build for specific platforms
-./build-all.sh win                    # Windows only
-./build-all.sh macos                  # macOS (both x64 and ARM64) 
-./build-all.sh linux                  # Linux only
-./build-all.sh win linux              # Multiple platforms
-./build-all.sh win-x64                # Specific architecture
-./build-all.sh osx-arm64              # macOS Apple Silicon only
+# Build for platform families
+./build.sh win          # Windows (x64 + ARM64)
+./build.sh macos        # macOS (x64 + ARM64)
+./build.sh linux        # Linux (x64 + ARM64)
+./build.sh win linux    # Multiple families
+
+# Build specific architectures
+./build.sh win-x64      # Windows x64 only
+./build.sh win-arm64    # Windows ARM64 only
+./build.sh osx-arm64    # macOS Apple Silicon only
+./build.sh linux-arm64  # Linux ARM64 only
 
 # PowerShell examples
-./build-all.ps1 win,macos            # Multiple platforms (comma-separated)
-./build-all.ps1 linux-x64            # Specific architecture
+.\build.ps1 win,linux             # Multiple platform families
+.\build.ps1 win-arm64,linux-arm64 # Multiple specific architectures
 ```
 
-#### Available Platform Targets
+#### Supported Platforms (64-bit and ARM only)
 
-| Platform | Target ID | Description |
-|----------|-----------|-------------|
-| `win` | `win-x64` | Windows x64 |
+| Platform Family | Specific Targets | Description |
+|------------------|------------------|-------------|
+| `win` | `win-x64`, `win-arm64` | Windows x64 and ARM64 |
 | `macos` | `osx-x64`, `osx-arm64` | macOS Intel and Apple Silicon |
-| `linux` | `linux-x64` | Linux x64 |
-| `win-x64` | `win-x64` | Windows x64 (specific) |
-| `osx-x64` | `osx-x64` | macOS Intel (specific) |
-| `osx-arm64` | `osx-arm64` | macOS Apple Silicon (specific) |
-| `linux-x64` | `linux-x64` | Linux x64 (specific) |
+| `linux` | `linux-x64`, `linux-arm64` | Linux x64 and ARM64 |
 
 #### Manual Build Commands
 
