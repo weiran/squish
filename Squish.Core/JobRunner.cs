@@ -134,7 +134,7 @@ public class JobRunner
                                           .ToDictionary(t => t.FilePath, t => new FileConversionProgress
                                           {
                                               FilePath = t.FilePath,
-                                              FileName = Path.GetFileName(t.FilePath),
+                                              FileName = TruncateFileName(Path.GetFileName(t.FilePath)),
                                               Progress = t.Progress,
                                               Speed = t.Speed,
                                               IsActive = true
@@ -274,5 +274,21 @@ public class JobRunner
     {
         return codec.Equals("hevc", StringComparison.OrdinalIgnoreCase) ||
                codec.Equals("h265", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string TruncateFileName(string fileName)
+    {
+        const int maxLength = 50;
+        if (fileName.Length <= maxLength)
+            return fileName;
+            
+        var extension = Path.GetExtension(fileName);
+        var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+        var truncatedLength = maxLength - extension.Length - 3; // 3 for "..."
+        
+        if (truncatedLength <= 0)
+            return "..." + extension;
+            
+        return nameWithoutExtension.Substring(0, truncatedLength) + "..." + extension;
     }
 }
