@@ -154,7 +154,7 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
                     {
                         if (!fileTasks.ContainsKey(filePath))
                         {
-                            var taskDescription = $"[cyan]{fileProgress.FileName}[/]";
+                            var taskDescription = $"[cyan]{fileProgress.FileName.EscapeMarkup()}[/]";
                             fileTasks[filePath] = ctx.AddTask(taskDescription, maxValue: 100);
                         }
                         
@@ -164,7 +164,7 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
                         // Update description with speed info if available
                         if (!string.IsNullOrEmpty(fileProgress.Speed) && fileProgress.Speed != "0x")
                         {
-                            task.Description = $"[cyan]{fileProgress.FileName}[/] [dim]({fileProgress.Speed})[/]";
+                            task.Description = $"[cyan]{fileProgress.FileName.EscapeMarkup()}[/] [dim]({fileProgress.Speed.EscapeMarkup()})[/]";
                         }
                     }
                     
