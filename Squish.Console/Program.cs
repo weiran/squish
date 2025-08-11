@@ -31,6 +31,10 @@ var outputOption = new Option<string?>(
     aliases: ["-o", "--output"],
     description: "Output folder for converted files (preserves originals)");
 
+var useCurrentTimestampsOption = new Option<bool>(
+    aliases: ["--use-current-timestamps"],
+    description: "Use current date/time for converted files instead of preserving original timestamps");
+
 var rootCommand = new RootCommand("Squish - Video compression utility using H.265/HEVC encoding")
 {
     directoryArgument,
@@ -38,10 +42,11 @@ var rootCommand = new RootCommand("Squish - Video compression utility using H.26
     cpuOnlyOption,
     jobsOption,
     limitOption,
-    outputOption
+    outputOption,
+    useCurrentTimestampsOption
 };
 
-rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int jobs, int? limit, string? output) =>
+rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int jobs, int? limit, string? output, bool useCurrentTimestamps) =>
 {
     if (!Directory.Exists(directory))
     {
@@ -84,7 +89,8 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
         ParallelJobs = jobs,
         Limit = limit,
         ListOnly = listOnly,
-        OutputFolder = output
+        OutputFolder = output,
+        PreserveTimestamps = !useCurrentTimestamps
     };
 
     AnsiConsole.MarkupLine($"[green]Squish - Processing directory:[/] [yellow]{directory.EscapeMarkup()}[/]");
@@ -261,7 +267,7 @@ rootCommand.SetHandler(async (string directory, bool listOnly, bool cpuOnly, int
         }
     });
 
-}, directoryArgument, listOnlyOption, cpuOnlyOption, jobsOption, limitOption, outputOption);
+}, directoryArgument, listOnlyOption, cpuOnlyOption, jobsOption, limitOption, outputOption, useCurrentTimestampsOption);
 
 static string FormatFileSize(long bytes)
 {

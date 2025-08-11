@@ -7,4 +7,5 @@ public class ConversionOptions
     public int? Limit { get; set; }
     public bool ListOnly { get; set; }
     public string? OutputFolder { get; set; }
+    public bool PreserveTimestamps { get; set; } = true;
 }

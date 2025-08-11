@@ -156,6 +156,15 @@ public class VideoConverter : IVideoConverter
                 File.Move(tempOutputPath, finalOutputPath, true);
             }
 
+            // Preserve original file timestamps if requested
+            if (options.PreserveTimestamps)
+            {
+                var originalFileInfo = new FileInfo(file.FilePath);
+                File.SetCreationTime(finalOutputPath, originalFileInfo.CreationTime);
+                File.SetLastWriteTime(finalOutputPath, originalFileInfo.LastWriteTime);
+                File.SetLastAccessTime(finalOutputPath, originalFileInfo.LastAccessTime);
+            }
+
             var newFileInfo = new FileInfo(finalOutputPath);
             result.NewSize = newFileInfo.Length;
             result.OutputPath = finalOutputPath;
