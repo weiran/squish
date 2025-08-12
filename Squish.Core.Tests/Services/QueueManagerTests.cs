@@ -150,7 +150,7 @@ public class QueueManagerTests
         var dequeuedItems = new List<VideoFile?>();
         var lockObject = new object();
 
-        // Enqueue 50 files
+        // Enqueue 50 files first
         for (int i = 0; i < 50; i++)
         {
             var index = i;
@@ -161,7 +161,10 @@ public class QueueManagerTests
             }));
         }
 
-        // Dequeue 25 files
+        // Wait for all enqueue operations to complete first
+        await Task.WhenAll(enqueueTasks);
+
+        // Now dequeue 25 files
         for (int i = 0; i < 25; i++)
         {
             dequeueTasks.Add(Task.Run(async () =>
@@ -174,12 +177,10 @@ public class QueueManagerTests
             }));
         }
 
-        await Task.WhenAll(enqueueTasks);
         await Task.WhenAll(dequeueTasks);
 
         queueManager.Count.Should().Be(25); // 50 enqueued - 25 dequeued
-        dequeuedItems.Count(x => x != null).Should().BeGreaterOrEqualTo(0);
-        dequeuedItems.Count(x => x != null).Should().BeLessOrEqualTo(25);
+        dequeuedItems.Count(x => x != null).Should().Be(25); // All 25 dequeue operations should succeed
     }
 
     [Fact]

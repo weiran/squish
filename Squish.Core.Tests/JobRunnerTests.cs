@@ -210,10 +210,7 @@ public class JobRunnerTests
             files => files.Count() == 1 && files.First().FilePath == "/test/video1.mp4")), Times.Once);
     }
 
-    // NOTE: This test has complex queue interaction mocking that needs to be fixed
-    // The test was failing before architecture improvements and requires deeper investigation
-    // of the JobRunner's queue processing logic.
-    [Fact(Skip = "Complex queue mocking needs investigation")]
+    [Fact]
     public async Task RunAsync_ProcessesFilesFromQueue()
     {
         // Arrange
@@ -240,12 +237,21 @@ public class JobRunnerTests
         _mockVideoInspector.Setup(v => v.GetVideoDurationAsync(It.IsAny<string>()))
             .ReturnsAsync(TimeSpan.FromMinutes(10));
         
-        // Simplified queue mock - return the file once, then empty
-        _mockQueueManager.SetupSequence(q => q.Count)
-            .Returns(1)
-            .Returns(0);
-        _mockQueueManager.Setup(q => q.DequeueAsync())
-            .ReturnsAsync(files[0]);
+        // Setup queue manager to properly simulate queue behavior
+        // The queue starts with 1 item, then becomes empty after dequeue
+        var queueCallCount = 0;
+        _mockQueueManager.Setup(q => q.Count).Returns(() => 
+        {
+            // First several calls during processing loop return 1, then 0 
+            return queueCallCount++ < 3 ? 1 : 0;
+        });
+        
+        // Setup dequeue to return the file once, then null for subsequent calls
+        var dequeueCallCount = 0;
+        _mockQueueManager.Setup(q => q.DequeueAsync()).ReturnsAsync(() => 
+        {
+            return dequeueCallCount++ == 0 ? files[0] : null;
+        });
         
         _mockVideoConverter.Setup(v => v.ConvertAsync(
             It.IsAny<VideoFile>(), 
@@ -268,6 +274,10 @@ public class JobRunnerTests
             TimeSpan.FromMinutes(10),
             options,
             It.IsAny<IProgress<ConversionProgress>>()), Times.Once);
+        
+        // Verify the file was properly enqueued
+        _mockQueueManager.Verify(q => q.EnqueueRange(It.Is<IEnumerable<VideoFile>>(
+            f => f.Count() == 1 && f.First().FilePath == "/test/video1.mp4")), Times.Once);
     }
 
     [Fact]
