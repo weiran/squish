@@ -3,16 +3,16 @@
 # so users don't need to install .NET separately.
 #
 # Usage:
-#   .\build.ps1                       # Build for current platform only (default)
-#   .\build.ps1 -All                  # Build for all supported platforms
-#   .\build.ps1 -Dev                  # Fast development build (current platform, no publish)
-#   .\build.ps1 win                   # Build for Windows (both x64 and ARM64)
-#   .\build.ps1 macos                 # Build for macOS (both x64 and ARM64) 
-#   .\build.ps1 linux                 # Build for Linux (both x64 and ARM64)
-#   .\build.ps1 win,linux             # Build for multiple platform families
-#   .\build.ps1 win-x64               # Build for Windows x64 specifically
-#   .\build.ps1 osx-arm64             # Build for macOS ARM64 specifically
-#   .\build.ps1 linux-arm64           # Build for Linux ARM64 specifically
+#   .\build_fixed.ps1                 # Build for current platform only (default)
+#   .\build_fixed.ps1 -All            # Build for all supported platforms
+#   .\build_fixed.ps1 -Dev            # Fast development build (current platform, no publish)
+#   .\build_fixed.ps1 win             # Build for Windows (both x64 and ARM64)
+#   .\build_fixed.ps1 macos           # Build for macOS (both x64 and ARM64) 
+#   .\build_fixed.ps1 linux           # Build for Linux (both x64 and ARM64)
+#   .\build_fixed.ps1 win,linux       # Build for multiple platform families
+#   .\build_fixed.ps1 win-x64         # Build for Windows x64 specifically
+#   .\build_fixed.ps1 osx-arm64       # Build for macOS ARM64 specifically
+#   .\build_fixed.ps1 linux-arm64     # Build for Linux ARM64 specifically
 
 param(
     [string[]]$Platforms = @(),
@@ -59,16 +59,16 @@ $BuildPlatforms = @()
 
 if ($All) {
     $BuildPlatforms = $AllSupportedPlatforms
-    Write-Host "🔨 Building Squish for all supported platforms..." -ForegroundColor Green
+    Write-Host "Building Squish for all supported platforms..." -ForegroundColor Green
 } elseif ($Dev) {
     $CurrentPlatform = Get-CurrentPlatform
     $BuildPlatforms = @($CurrentPlatform)
-    Write-Host "🔨 Fast development build for current platform: $CurrentPlatform" -ForegroundColor Green
+    Write-Host "Fast development build for current platform: $CurrentPlatform" -ForegroundColor Green
 } elseif ($Platforms.Count -eq 0) {
     # Default: build for current platform only
     $CurrentPlatform = Get-CurrentPlatform
     $BuildPlatforms = @($CurrentPlatform)
-    Write-Host "🔨 Building Squish for current platform: $CurrentPlatform" -ForegroundColor Green
+    Write-Host "Building Squish for current platform: $CurrentPlatform" -ForegroundColor Green
 } else {
     # Parse platform arguments
     foreach ($arg in $Platforms) {
@@ -78,7 +78,7 @@ if ($All) {
             "linux" { $BuildPlatforms += @("linux-x64", "linux-arm64") }
             { $_ -in @("win-x64", "win-arm64", "osx-x64", "osx-arm64", "linux-x64", "linux-arm64") } { $BuildPlatforms += $_ }
             default {
-                Write-Host "❌ Unknown platform: $arg" -ForegroundColor Red
+                Write-Host "Unknown platform: $arg" -ForegroundColor Red
                 Write-Host "Valid platforms:" -ForegroundColor White
                 Write-Host "  Platform families: win, macos, linux" -ForegroundColor White
                 Write-Host "  Specific targets: win-x64, win-arm64, osx-x64, osx-arm64, linux-x64, linux-arm64" -ForegroundColor White
@@ -89,11 +89,11 @@ if ($All) {
     }
     
     if ($BuildPlatforms.Count -eq 0) {
-        Write-Host "❌ No valid platforms specified" -ForegroundColor Red
+        Write-Host "No valid platforms specified" -ForegroundColor Red
         exit 1
     }
     
-    Write-Host "🔨 Building Squish for platforms: $($BuildPlatforms -join ', ')" -ForegroundColor Green
+    Write-Host "Building Squish for platforms: $($BuildPlatforms -join ', ')" -ForegroundColor Green
 }
 Write-Host ""
 
@@ -124,13 +124,13 @@ if ($Dev) {
     Write-Host "📂 Console executable location: Squish.Console/bin/Release/net9.0/squish" -ForegroundColor White
     Write-Host "📂 UI executable location: Squish.UI/bin/Release/net9.0/Squish.UI" -ForegroundColor White
     Write-Host ""
-    Write-Host "🚀 Ready to run locally!" -ForegroundColor Green
+    Write-Host "Ready to run locally!" -ForegroundColor Green
     exit 0
 }
 
 # Production publish builds
 if (Test-Path "publish") {
-    Write-Host "🧹 Cleaning previous builds..." -ForegroundColor Yellow
+    Write-Host "Cleaning previous builds..." -ForegroundColor Yellow
     Remove-Item -Recurse -Force "publish"
 }
 
@@ -144,12 +144,12 @@ $CommonArgs = @("-c", "Release", "--self-contained", "true", "-p:PublishSingleFi
 function Get-PlatformInfo {
     param($Platform)
     switch ($Platform) {
-        "win-x64" { return @{ Icon = "🪟"; Description = "Windows x64" } }
-        "win-arm64" { return @{ Icon = "🪟"; Description = "Windows ARM64" } }
-        "osx-x64" { return @{ Icon = "🍎"; Description = "macOS x64 (Intel)" } }
-        "osx-arm64" { return @{ Icon = "🍎"; Description = "macOS ARM64 (Apple Silicon)" } }
-        "linux-x64" { return @{ Icon = "🐧"; Description = "Linux x64" } }
-        "linux-arm64" { return @{ Icon = "🐧"; Description = "Linux ARM64" } }
+        "win-x64" { return @{ Icon = "[WIN]"; Description = "Windows x64" } }
+        "win-arm64" { return @{ Icon = "[WIN]"; Description = "Windows ARM64" } }
+        "osx-x64" { return @{ Icon = "[MAC]"; Description = "macOS x64 (Intel)" } }
+        "osx-arm64" { return @{ Icon = "[MAC]"; Description = "macOS ARM64 (Apple Silicon)" } }
+        "linux-x64" { return @{ Icon = "[LNX]"; Description = "Linux x64" } }
+        "linux-arm64" { return @{ Icon = "[LNX]"; Description = "Linux ARM64" } }
     }
 }
 
@@ -192,9 +192,9 @@ foreach ($platform in $BuildPlatforms) {
 }
 
 # Display build results
-Write-Host "🎉 All builds completed successfully!" -ForegroundColor Green
+Write-Host "All builds completed successfully!" -ForegroundColor Green
 Write-Host ""
-Write-Host "📂 Executables created in:" -ForegroundColor White
+Write-Host "Executables created in:" -ForegroundColor White
 
 foreach ($platform in $BuildPlatforms) {
     $info = Get-PlatformInfo $platform
@@ -220,11 +220,11 @@ foreach ($platform in $BuildPlatforms) {
 }
 
 Write-Host ""
-Write-Host "💡 These executables include the .NET runtime and can run without installing .NET" -ForegroundColor Yellow
+Write-Host "Info: These executables include the .NET runtime and can run without installing .NET" -ForegroundColor Yellow
 Write-Host ""
 
 # Show file sizes
-Write-Host "📊 Executable sizes:" -ForegroundColor White
+Write-Host "Executable sizes:" -ForegroundColor White
 
 foreach ($platform in $BuildPlatforms) {
     $info = Get-PlatformInfo $platform
@@ -262,4 +262,4 @@ foreach ($platform in $BuildPlatforms) {
 }
 
 Write-Host ""
-Write-Host "🚀 Ready to distribute!" -ForegroundColor Green
+Write-Host "Ready to distribute!" -ForegroundColor Green

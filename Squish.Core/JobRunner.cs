@@ -14,7 +14,7 @@ internal class FileProgressTracker
     public bool IsCompleted { get; set; }
 }
 
-public class JobRunner
+public class JobRunner : IJobRunner
 {
     private readonly IFileFinder _fileFinder;
     private readonly IVideoInspector _videoInspector;
@@ -42,6 +42,9 @@ public class JobRunner
         IProgress<ConversionProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        // Check cancellation token at the very start
+        cancellationToken.ThrowIfCancellationRequested();
+        
         // Report discovery phase
         progress?.Report(new ConversionProgress
         {

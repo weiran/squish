@@ -12,6 +12,7 @@ public class VideoConverter : IVideoConverter
 {
     private readonly IProcessWrapper _processWrapper;
     private readonly ILogger _logger;
+    private readonly IFileSystemWrapper _fileSystemWrapper;
     private static readonly Regex ProgressRegex = new(@"time=(\d{2}):(\d{2}):(\d{2}\.\d{2})", RegexOptions.Compiled);
     private static readonly Regex SpeedRegex = new(@"speed=\s*(\d+(?:\.\d+)?)x", RegexOptions.Compiled);
     
@@ -21,17 +22,18 @@ public class VideoConverter : IVideoConverter
     private const string ENCODER_SOFTWARE_X265 = "libx265";           // Software x265 encoder
     
     // CRF (Constant Rate Factor) constants for different encoders
-    private const string CRF_VIDEOTOOLBOX = "50";  // Apple VideoToolbox HEVC encoder
-    private const string CRF_NVENC = "40";         // NVIDIA NVENC HEVC encoder
-    private const string CRF_SOFTWARE_X265 = "32"; // Software x265 encoder
+    private const string CRF_VIDEOTOOLBOX = "40";  // Apple VideoToolbox HEVC encoder
+    private const string CRF_NVENC = "32";         // NVIDIA NVENC HEVC encoder
+    private const string CRF_SOFTWARE_X265 = "28"; // Software x265 encoder
 
-    public VideoConverter(IProcessWrapper processWrapper, ILogger logger)
+    public VideoConverter(IProcessWrapper processWrapper, ILogger logger, IFileSystemWrapper fileSystemWrapper)
     {
         _processWrapper = processWrapper ?? throw new ArgumentNullException(nameof(processWrapper));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _fileSystemWrapper = fileSystemWrapper ?? throw new ArgumentNullException(nameof(fileSystemWrapper));
     }
 
-    public async Task<ConversionResult> ConvertAsync(VideoFile file, string basePath, TimeSpan duration, ConversionOptions options, IProgress<ConversionProgress> progress)
+    public virtual async Task<ConversionResult> ConvertAsync(VideoFile file, string basePath, TimeSpan duration, ConversionOptions options, IProgress<ConversionProgress> progress)
     {
         ArgumentNullException.ThrowIfNull(file);
         ArgumentNullException.ThrowIfNull(options);
@@ -143,26 +145,34 @@ public class VideoConverter : IVideoConverter
             }
 
             // Verify output file was created and has content
-            if (!File.Exists(conversionOutputPath))
+            if (!_fileSystemWrapper.FileExists(conversionOutputPath))
                 throw new VideoConversionException("ffmpeg did not create output file");
 
-            var outputFileInfo = new FileInfo(conversionOutputPath);
+            var outputFileInfo = _fileSystemWrapper.GetFileInfo(conversionOutputPath);
             if (outputFileInfo.Length == 0)
                 throw new VideoConversionException("ffmpeg created empty output file");
 
             // If a temporary file was used, move it to the final destination
             if (tempOutputPath != null)
             {
-                File.Move(tempOutputPath, finalOutputPath, true);
+                _fileSystemWrapper.MoveFile(tempOutputPath, finalOutputPath, true);
             }
 
-            // Preserve original file timestamps if requested
+            // Handle timestamp preservation or setting to current time
             if (options.PreserveTimestamps)
             {
-                var originalFileInfo = new FileInfo(file.FilePath);
-                File.SetCreationTime(finalOutputPath, originalFileInfo.CreationTime);
-                File.SetLastWriteTime(finalOutputPath, originalFileInfo.LastWriteTime);
-                File.SetLastAccessTime(finalOutputPath, originalFileInfo.LastAccessTime);
+                var originalFileInfo = _fileSystemWrapper.GetFileInfo(file.FilePath);
+                _fileSystemWrapper.SetCreationTime(finalOutputPath, originalFileInfo.CreationTime);
+                _fileSystemWrapper.SetLastWriteTime(finalOutputPath, originalFileInfo.LastWriteTime);
+                _fileSystemWrapper.SetLastAccessTime(finalOutputPath, originalFileInfo.LastAccessTime);
+            }
+            else
+            {
+                // Set current timestamps when not preserving original ones
+                var now = DateTime.Now;
+                _fileSystemWrapper.SetCreationTime(finalOutputPath, now);
+                _fileSystemWrapper.SetLastWriteTime(finalOutputPath, now);
+                _fileSystemWrapper.SetLastAccessTime(finalOutputPath, now);
             }
 
             var newFileInfo = new FileInfo(finalOutputPath);
@@ -180,11 +190,11 @@ public class VideoConverter : IVideoConverter
         catch (Exception ex)
         {
             // Clean up the output file if an error occurred
-            if (File.Exists(conversionOutputPath))
+            if (_fileSystemWrapper.FileExists(conversionOutputPath))
             {
                 try
                 {
-                    File.Delete(conversionOutputPath);
+                    _fileSystemWrapper.DeleteFile(conversionOutputPath);
                 }
                 catch (Exception cleanupEx)
                 {
@@ -218,7 +228,7 @@ public class VideoConverter : IVideoConverter
         return result;
     }
 
-    private static List<string> BuildFfmpegArguments(string inputPath, string outputPath, ConversionOptions options)
+    protected virtual List<string> BuildFfmpegArguments(string inputPath, string outputPath, ConversionOptions options)
     {
         var args = new List<string>
         {
@@ -265,23 +275,26 @@ public class VideoConverter : IVideoConverter
         return args;
     }
 
-    private static string? GetGpuEncoder()
+    protected virtual string? GetGpuEncoder()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            return ENCODER_VIDEOTOOLBOX;
+            return IsEncoderAvailable(ENCODER_VIDEOTOOLBOX) ? ENCODER_VIDEOTOOLBOX : null;
         }
 
-        return HasNvidiaGpu() ? ENCODER_NVENC : null;
+        // On Windows/Linux, check for NVENC support
+        return IsEncoderAvailable(ENCODER_NVENC) ? ENCODER_NVENC : null;
     }
 
-    private static bool HasNvidiaGpu()
+    protected virtual bool IsEncoderAvailable(string encoderName)
     {
         try
         {
+            // Check if FFmpeg supports the specific encoder by listing available encoders
             var processStartInfo = new ProcessStartInfo
             {
-                FileName = "nvidia-smi",
+                FileName = "ffmpeg",
+                Arguments = "-hide_banner -encoders",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -289,7 +302,13 @@ public class VideoConverter : IVideoConverter
             };
 
             using var process = Process.Start(processStartInfo);
-            return process?.WaitForExit(5000) == true && process.ExitCode == 0;
+            if (process == null) return false;
+            
+            var output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            
+            // Check if the specified encoder is available
+            return process.ExitCode == 0 && output.Contains(encoderName);
         }
         catch
         {

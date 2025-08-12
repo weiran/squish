@@ -235,6 +235,8 @@ echo "📂 Executables created in:"
 
 for platform in "${PLATFORMS[@]}"; do
     read -r icon description <<< "$(get_platform_info "$platform")"
+    
+    # Console app paths
     case $platform in
         win-x64|win-arm64)
             if [ -f "publish/$platform/squish-console.exe" ]; then
@@ -263,6 +265,8 @@ echo ""
 echo "📊 Executable sizes:"
 for platform in "${PLATFORMS[@]}"; do
     read -r icon description <<< "$(get_platform_info "$platform")"
+    
+    # Console app sizes
     case $platform in
         win-x64|win-arm64)
             if [ -f "publish/$platform/squish-console.exe" ]; then
